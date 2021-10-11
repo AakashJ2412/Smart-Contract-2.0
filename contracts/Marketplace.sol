@@ -133,6 +133,22 @@ contract Marketplace {
         return items;
     }
 
+    /// @notice Function to print all listings of a particular user
+    /// @dev Listing password is being filtered from listings
+    /// @return Listing The list of all listings of a certain address
+    function fetchUserItems() public view returns (Listing[] memory) {
+        Listing[] memory items = new Listing[];
+        for (uint i = 0; i < itemCount; i++) {
+            if (listings[i].uniqueSellerID == msg.sender || listings[i].uniqueBuyerID == msg.sender) {
+                Listing memory currentItem = listings[i];
+                items[currentIndex] = currentItem;
+                items[currentIndex].item = "";
+                currentIndex += 1;
+            }
+        }
+        return items;
+    }
+
 
     /// @notice Function to buy a listing
     /// @dev Triggers the event for logging
