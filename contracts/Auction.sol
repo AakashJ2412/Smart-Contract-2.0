@@ -7,6 +7,9 @@ pragma experimental ABIEncoderV2;
 /// @notice Do not deploy
 /// @dev Parent class for the other contracts.
 contract AuctionParent {
+    /// @dev Possible states that an Auction can take.
+    enum State { BIDDING, REVEAL, COMPLETE }
+    
     /// @dev structure to contain all the information about bids made.
     struct Bid {
         bytes32 blindedBid;
@@ -17,10 +20,7 @@ contract AuctionParent {
     /// which is being auctioned.
     struct Details {
         address payable beneficiary;
-        uint biddingEnd;
-        uint revealEnd;
-        bool ended;
-        string item;
+        State state;
     }
     Details public details;
 
@@ -30,16 +30,6 @@ contract AuctionParent {
     address payable public requiredBidder;
     uint public requiredBid;
 
-    /// @notice Modifiers for ensuring the events happen before _time
-    /// @param _time parameter for checking validity.
-    modifier onlyBefore(uint _time) { 
-        require(block.timestamp < _time); _;}
-    /// @notice Modifiers for ensuring the events happen after _time
-    /// @param _time parameter for checking validity.
-    modifier onlyAfter(uint _time) { 
-        require(block.timestamp > _time); _;}
-
-    
     /// @notice Triggered to store the details of the created auction.
     /// @dev Must not store the item itself for privacy.
     /// @param beneficiary The seller's address .
@@ -48,31 +38,22 @@ contract AuctionParent {
     /// @param item The item of auction.
     event AuctionCreated ( 
         address beneficiary,
-        uint biddingEnd,
-        uint revealEnd,
         string item 
     );
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs.
     /// @param _biddingTime Time in seconds for bidding time.
     /// @param _revealTime Time in seconds for revealing time.
-    /// @param _beneficiary Address for the sellers address.
+    /// @param _beneficiary Address for the sellers address
     /// @param _item the item on auction.
     constructor(
-        uint _biddingTime,
-        uint _revealTime,
         address payable _beneficiary,
         string memory _item
     ) internal {
         details.beneficiary = _beneficiary;
-        details.biddingEnd = block.timestamp + _biddingTime;
-        details.revealEnd = details.biddingEnd + _revealTime;
-        details.item = _item;
+        details.
         emit AuctionCreated(
             details.beneficiary,
-            details.biddingEnd,
-            details.revealEnd,
-            details.item 
         );
     }
 
@@ -124,11 +105,7 @@ contract AuctionParent {
     /// @notice Called by buyer to reveal the bids he had made.
     /// @dev placeBid is different for different kinds of auction.
     /// @param value The value that is claimed by the buyer.
-    function reveal(uint value, address payable beneficiary)
-    onlyAfter(details.biddingEnd)
-    onlyBefore(details.revealEnd)
-        public returns (bool)
-    {
+    function reveal(uint value, address payable beneficiary) public returns (bool) {
         if (bids[beneficiary].blindedBid != keccak256(abi.encodePacked(value))) {
             // Bid was not actually revealed.
             // Do not refund deposit.
@@ -195,8 +172,6 @@ contract AuctionParent {
     function fetchDetails() public view returns (Details memory) {
         Details memory newDetails = Details(
             details.beneficiary,
-            details.biddingEnd - block.timestamp,
-            details.revealEnd - block.timestamp,
             details.ended,
             details.item
         );
@@ -224,15 +199,11 @@ contract AuctionParent {
 contract FirstPrice is AuctionParent {
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _biddingTime Time in seconds for bidding time.
-    /// @param _revealTime Time in seconds for revealing time.
     /// @param _item the item on auction.
     constructor(
-        uint _biddingTime,
-        uint _revealTime,
         string memory _item,
         address payable _beneficiary
-    ) public AuctionParent(_biddingTime, _revealTime, _beneficiary, _item) { }
+    ) public AuctionParent(_beneficiary, _item) { }
     /// @notice Triggered to store the bid and the old value stored. 
     /// @param oldBidder The bidder that was before the current bid.
     /// @param oldValue The value before this bid.
@@ -282,15 +253,11 @@ contract SecondPrice is AuctionParent {
     uint public highestBid;
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _biddingTime Time in seconds for bidding time.
-    /// @param _revealTime Time in seconds for revealing time.
     /// @param _item the item on auction.
     constructor(
-        uint _biddingTime,
-        uint _revealTime,
         string memory _item,
         address payable _beneficiary
-    ) public AuctionParent(_biddingTime, _revealTime, _beneficiary, _item) { }
+    ) public AuctionParent(_beneficiary, _item) { }
     
     /// @notice Triggered to store the bid and the old value stored. 
     /// @param oldBidder The bidder that was before the current bid.
@@ -349,15 +316,11 @@ contract AveragePrice is AuctionParent {
     
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs.
-    /// @param _biddingTime Time in seconds for bidding time.
-    /// @param _revealTime Time in seconds for revealing time.
     /// @param _item the item on auction.
     constructor(
-        uint _biddingTime,
-        uint _revealTime,
         string memory _item,
         address payable _beneficiary
-    ) public AuctionParent(_biddingTime, _revealTime, _beneficiary, _item) { }
+    ) public AuctionParent(_beneficiary, _item) { }
     
     /// @notice Function that will store the bidder details.
     /// @dev Just stores the values since the average can only be calcualated

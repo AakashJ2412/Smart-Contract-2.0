@@ -1,5 +1,6 @@
 const FirstAuction = artifacts.require("FirstAuction");
 
 module.exports = function (deployer) {
-    deployer.deploy(FirstAuction);
+  deployer.deploy(FirstAuction);
 };
+
