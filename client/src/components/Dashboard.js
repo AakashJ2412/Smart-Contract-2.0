@@ -4,6 +4,8 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
+import EthCrypto from "eth-crypto";
+import Web3 from "web3";
 
 class Dashboard extends React.Component {
   itemState = {
@@ -30,14 +32,18 @@ class Dashboard extends React.Component {
   };
 
   getUserListings = async () => {
-    const ret = await this.props.marketplace.methods.fetchUserItems().call();
+    const ret = await this.props.marketplace.methods.fetchUserItems().call({
+      from: this.props.accounts[0],
+    });
     const soldList = [];
     const boughtList = [];
     if (ret) {
       ret.forEach((item) => {
-        console.log(item);
-        if (this.props.accounts[0] === item.uniqueSellerID) soldList.push(item);
-        else if (item.state === 1 || item.state === 2) boughtList.push(item);
+        if (this.props.accounts[0] === item.uniqueSellerID) {
+          soldList.push(item);
+        } else if (item.state === "1" || item.state === "2") {
+          boughtList.push(item);
+        }
       });
     }
 
@@ -48,18 +54,57 @@ class Dashboard extends React.Component {
     });
   };
 
-  deliverListings = async (itemID, price) => {
+  deliverListings = async (itemID) => {
+    try {
+      // TODO: Make modal
+      const { marketplace, accounts } = this.props;
+      const item = await marketplace.methods.fetchItem(itemID).call();
+
+      // Fetch and encrypt the password with buyers public key
+      const pwd = prompt("Gimme password!!!");
+      const encrypted = await EthCrypto.encryptWithPublicKey(
+        item.buyerPubKey,
+        pwd
+      );
+
+      await marketplace.methods
+        .setItem(
+          itemID,
+          encrypted.iv,
+          encrypted.ephemPublicKey,
+          encrypted.ciphertext,
+          encrypted.mac
+        )
+        .send({
+          from: accounts[0],
+        });
+    } catch (ex) {
+      console.log("Error while delivering item", ex);
+    }
+  };
+
+  confirmListings = async (itemID, price) => {
     try {
       const { accounts, marketplace } = this.props;
+
+      // Decrypt the item
+      const privateKey = prompt("Gimme private!!");
+      const item = await marketplace.methods.fetchItem(itemID).call();
+      const pwd = await EthCrypto.decryptWithPrivateKey(privateKey, item.item);
+
       await marketplace.methods
         .confirmListing(itemID)
-        .send({ from: accounts[0], value: price });
+        .send({ from: accounts[0], value: Web3.utils.toWei(price, "ether") });
+
+      alert(`Here you go: ${pwd}`);
+
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while confirming listing", ex);
     }
   };
 
+  // TODO: Remove later
   relistListings = async (itemID, item) => {
     try {
       const { accounts, marketplace } = this.props;
@@ -92,7 +137,7 @@ class Dashboard extends React.Component {
                 </tr>
               </thead>
               <tbody>
-                {!loading ? (
+                {!loading &&
                   soldListings.map((listing, id) => (
                     <tr key={id + "row"}>
                       <td key={id + "a"}>{id + 1}</td>
@@ -101,27 +146,22 @@ class Dashboard extends React.Component {
                       <td key={id + "d"}>{listing.askingPrice}</td>
                       <td key={id + "e"}>{0}</td>
                       <td key={id + "f"}>{this.itemState[listing.state]}</td>
-                      {listing.state === 1 ? (
+                      {listing.state === "1" && (
                         <td>
                           <Button
                             onClick={() =>
-                              this.relistListings(
+                              this.deliverListings(
                                 listing.listingID,
                                 listing.item
                               )
                             }
                           >
-                            Relist
+                            Deliver
                           </Button>
                         </td>
-                      ) : (
-                        <td></td>
                       )}
                     </tr>
-                  ))
-                ) : (
-                  <></>
-                )}
+                  ))}
               </tbody>
             </Table>
           </Col>
@@ -142,7 +182,7 @@ class Dashboard extends React.Component {
                 </tr>
               </thead>
               <tbody>
-                {!loading ? (
+                {!loading &&
                   boughtListings.map((listing, id) => (
                     <tr key={id + "row"}>
                       <td key={id + "a"}>{id + 1}</td>
@@ -151,11 +191,11 @@ class Dashboard extends React.Component {
                       <td key={id + "d"}>{listing.askingPrice}</td>
                       <td key={id + "e"}>{0}</td>
                       <td key={id + "f"}>{this.itemState[listing.state]}</td>
-                      {listing.state === 1 ? (
+                      {listing.state === "1" && (
                         <td>
                           <Button
                             onClick={() =>
-                              this.deliverListings(
+                              this.confirmListings(
                                 listing.listingID,
                                 listing.askingPrice
                               )
@@ -164,14 +204,9 @@ class Dashboard extends React.Component {
                             Confirm
                           </Button>
                         </td>
-                      ) : (
-                        <td></td>
                       )}
                     </tr>
-                  ))
-                ) : (
-                  <></>
-                )}
+                  ))}
               </tbody>
             </Table>
           </Col>

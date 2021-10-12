@@ -9,7 +9,15 @@ pragma experimental ABIEncoderV2;
 /// @dev It is assumed that the seller will deliver after getting paid
 contract Marketplace {
     /// @dev Possible states that a Listing can take
-    enum State { UNSOLD, SOLD, DELIVERED }
+    enum State { UNSOLD, SOLD, PENDING, DELIVERED }
+
+    /// @dev Stores the encrypted password
+    struct Encrypted {
+      string iv;
+      string ephemPublicKey;
+      string ciphertext;
+      string mac;
+    }
 
     /// @dev Stores the details of a listing
     struct Listing {
@@ -19,7 +27,8 @@ contract Marketplace {
         uint256 askingPrice;
         address payable uniqueSellerID;
         address uniqueBuyerID;
-        string item;
+        string buyerPubKey;
+        Encrypted item;
         State state;
     }
 
@@ -53,12 +62,10 @@ contract Marketplace {
     /// @param price Price set by the seller
     /// @param itemName Name of the item
     /// @param itemDesc Description of the item set by seller
-    /// @param item String to be sold
     function createListing(
         uint256 price,
         string memory itemName,
-        string memory itemDesc,
-        string memory item
+        string memory itemDesc
     ) public payable {
         require(price > 0, "Price must be atleast 1 wei");
 
@@ -69,7 +76,8 @@ contract Marketplace {
             price,
             msg.sender,
             address(0),
-            item,
+            "",
+            Encrypted("", "", "", ""),
             State.UNSOLD
         );
 
@@ -113,6 +121,27 @@ contract Marketplace {
         address uniqueBuyerID
     );
 
+    /// TODO: Write this later
+    function fetchItem(uint itemId) public view returns (Listing memory) {
+      return listings[itemId];
+    }
+
+    /// TODO: Write this later
+    function setItem(
+      uint itemId,
+      string memory iv,
+      string memory ephemPublicKey,
+      string memory ciphertext,
+      string memory mac
+    ) public {
+      require(msg.sender == listings[itemId].uniqueSellerID, "Can't set");
+      listings[itemId].item = Encrypted(
+        iv,
+        ephemPublicKey,
+        ciphertext,
+        mac
+      ); 
+    }
 
     /// @notice Function to print all the active listings
     /// @dev Listing password is being filtered from listings
@@ -126,7 +155,6 @@ contract Marketplace {
             if (listings[i].state == State.UNSOLD) {
                 Listing memory currentItem = listings[i];
                 items[currentIndex] = currentItem;
-                items[currentIndex].item = "";
                 currentIndex += 1;
             }
         }
@@ -137,13 +165,20 @@ contract Marketplace {
     /// @dev Listing password is being filtered from listings
     /// @return Listing The list of all listings of a certain address
     function fetchUserItems() public view returns (Listing[] memory) {
-        Listing[] memory items = new Listing[];
+        uint cnt = 0;
+        for (uint i = 0; i < itemCount; i++) {
+            if (listings[i].uniqueSellerID == msg.sender || listings[i].uniqueBuyerID == msg.sender) {
+                cnt += 1;
+            }
+        }
+        
+        Listing[] memory items = new Listing[](cnt);
+        cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
             if (listings[i].uniqueSellerID == msg.sender || listings[i].uniqueBuyerID == msg.sender) {
                 Listing memory currentItem = listings[i];
-                items[currentIndex] = currentItem;
-                items[currentIndex].item = "";
-                currentIndex += 1;
+                items[cnt] = currentItem;
+                cnt += 1;
             }
         }
         return items;
@@ -153,9 +188,10 @@ contract Marketplace {
     /// @notice Function to buy a listing
     /// @dev Triggers the event for logging
     /// @param itemId The item the buyer wants to buy
-    function buyListing(uint itemId) external returns(string memory) {
+    function buyListing(uint itemId, string calldata buyerPubKey) external returns(string memory) {
         listings[itemId].uniqueBuyerID = msg.sender;
         listings[itemId].state = State.SOLD;
+        listings[itemId].buyerPubKey = buyerPubKey;
         itemSold += 1;
 
         emit ListingSold(
@@ -165,8 +201,6 @@ contract Marketplace {
             listings[itemId].uniqueSellerID,
             msg.sender
         );
-
-        return listings[itemId].item;
     }
 
     /// @notice Function to confirm a listing
@@ -174,6 +208,7 @@ contract Marketplace {
     /// @param itemId The item the buyer wants to confirm
     function confirmListing(uint itemId) external payable {
         require(listings[itemId].state == State.SOLD && listings[itemId].uniqueBuyerID == msg.sender, "Can't confirm");
+        require(msg.value >= listings[itemId].askingPrice, "Insufficient funds");
         listings[itemId].state = State.DELIVERED;
         require(listings[itemId].uniqueSellerID.send(listings[itemId].askingPrice), "Failed to transfer");
 
@@ -192,7 +227,6 @@ contract Marketplace {
     function relistListing(uint itemId, string calldata item) external {
         require(listings[itemId].state != State.DELIVERED && listings[itemId].uniqueSellerID == msg.sender, "Can't relist");
         listings[itemId].state = State.UNSOLD;
-        listings[itemId].item = item;
         itemSold -= 1;
 
         emit ListingCreated(

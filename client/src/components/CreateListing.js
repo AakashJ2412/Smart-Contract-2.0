@@ -25,7 +25,7 @@ function CreateListing({ marketplace, accounts }) {
     try {
       const { askingPrice, itemName, itemDesc, isAuctioned } = formik.values;
       await marketplace.methods
-        .createListing(askingPrice, itemName, itemDesc, "")
+        .createListing(askingPrice, itemName, itemDesc)
         .send({ from: accounts[0] });
     } catch (ex) {
       console.log("Error while creating listing", ex);

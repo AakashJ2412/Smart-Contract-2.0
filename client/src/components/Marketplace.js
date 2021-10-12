@@ -4,6 +4,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
+import EthCrypto from "eth-crypto";
 
 class Marketplace extends React.Component {
   constructor(props) {
@@ -36,9 +37,15 @@ class Marketplace extends React.Component {
 
   buyListings = async (itemID) => {
     try {
+      const { privateKey, publicKey } = EthCrypto.createIdentity();
       const { marketplace, accounts } = this.props;
-      await marketplace.methods.buyListing(itemID).send({ from: accounts[0] });
+      await marketplace.methods
+        .buyListing(itemID, publicKey)
+        .send({ from: accounts[0] });
       await this.getListings();
+
+      // TODO: Change to modal
+      alert(`Your private key. Don't forget. ${privateKey}`);
     } catch (ex) {
       console.log("Error while purchasing listing", ex);
     }
