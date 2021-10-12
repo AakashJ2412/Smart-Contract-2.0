@@ -85,6 +85,15 @@ contract AuctionParent {
         bytes32 blindedBid
     );
 
+    // /// TODO - Verify bid check
+    // /// @notice check function to see if bid was made by address or not
+    // /// @return boolean result
+    // function checkBid() public returns (bool) {
+    //     if(bids[msg.sender] )
+    //         return true;
+    //     return false;
+    // }
+
     /// @notice Function called by the buyer to make a bid.
     /// @param _blindedBid Encrypted amount.
     function bid(bytes32 _blindedBid, address payable _bidder)

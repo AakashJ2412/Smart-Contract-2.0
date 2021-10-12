@@ -8,9 +8,12 @@ import Navigation from "./components/Navigation";
 import Container from "react-bootstrap/Container";
 import getWeb3 from "./getWeb3";
 import MarketplaceABI from "./contracts/Marketplace.json";
+import FirstAuctionABI from "./contracts/FirstAuction.json";
+import SecondAuctionABI from "./contracts/SecondAuction.json";
+import AverageAuctionABI from "./contracts/AverageAuction.json";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  state = { storageValue: 0, web3: null, accounts: null, contract: {} };
 
   componentDidMount = async () => {
     try {
@@ -22,15 +25,33 @@ class App extends Component {
 
       // Get the contract instance.
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = MarketplaceABI.networks[networkId];
-      const instance = new web3.eth.Contract(
+      const marketplaceNetwork = MarketplaceABI.networks[networkId];
+      const marketplaceInstance = new web3.eth.Contract(
         MarketplaceABI.abi,
-        deployedNetwork && deployedNetwork.address
+        marketplaceNetwork && marketplaceNetwork.address
+      );
+
+      const firstauctionNetwork = FirstAuctionABI.networks[networkId];
+      const firstauctionInstance = new web3.eth.Contract(
+        FirstAuctionABI.abi,
+        firstauctionNetwork && firstauctionNetwork.address
+      );
+
+      const secondauctionNetwork = SecondAuctionABI.networks[networkId];
+      const secondauctionInstance = new web3.eth.Contract(
+        SecondAuctionABI.abi,
+        secondauctionNetwork && secondauctionNetwork.address
+      );
+
+      const averageauctionNetwork = AverageAuctionABI.networks[networkId];
+      const averageauctionInstance = new web3.eth.Contract(
+        AverageAuctionABI.abi,
+        averageauctionNetwork && averageauctionNetwork.address
       );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
+      this.setState({ web3, accounts, contract: {marketplace: marketplaceInstance, firstAuction: firstauctionInstance, secondAuction: secondauctionInstance, averageAuction: averageauctionInstance} }, this.runExample);
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -55,7 +76,7 @@ class App extends Component {
             exact
             render={() => (
               <Dashboard
-                marketplace={this.state.contract}
+                contracts={this.state.contract}
                 accounts={this.state.accounts}
               />
             )}
@@ -65,7 +86,7 @@ class App extends Component {
             exact
             render={() => (
               <Marketplace
-                marketplace={this.state.contract}
+                contracts={this.state.contract}
                 accounts={this.state.accounts}
               />
             )}
@@ -75,7 +96,7 @@ class App extends Component {
             exact
             render={() => (
               <CreateListing
-                marketplace={this.state.contract}
+                contracts={this.state.contract}
                 accounts={this.state.accounts}
               />
             )}

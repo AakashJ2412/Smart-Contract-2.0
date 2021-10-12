@@ -7,6 +7,20 @@ import Table from "react-bootstrap/Table";
 import EthCrypto from "eth-crypto";
 
 class Marketplace extends React.Component {
+  saleState = {
+    0: "First bid winner",
+    1: "First-price sealed-bid auction",
+    2: "Second-price sealed-bid auction",
+    3: "Average price auction"
+  };
+
+  contractState = {
+    0: "marketplace",
+    1: "firstAuction",
+    2: "secondAuction",
+    3: "averageAuction",
+  }
+
   constructor(props) {
     super(props);
     this.state = {
@@ -22,12 +36,18 @@ class Marketplace extends React.Component {
   };
 
   getListings = async () => {
-    var ret = await this.props.marketplace.methods.fetchMarketItems().call();
     var itemlist = [];
-    if (ret) {
-      ret.forEach((item) => {
-        if (this.props.accounts[0] !== item.uniqueSellerID) itemlist.push(item);
-      });
+
+    for(var i=0;i<4;i++) {
+      var ret = await this.props.contracts[this.contractState[i]].methods.fetchMarketItems().call();
+      if (ret) {
+        ret.forEach((item) => {
+          if (this.props.accounts[0] !== item.uniqueSellerID) { 
+            itemlist.push(item);
+            item.saleType = i;
+          }
+        });
+      }
     }
     this.setState({
       listings: itemlist,
@@ -35,13 +55,31 @@ class Marketplace extends React.Component {
     });
   };
 
-  buyListings = async (itemID) => {
+  buyMarketplaceListings = async (itemID) => {
     try {
       const { privateKey, publicKey } = EthCrypto.createIdentity();
-      const { marketplace, accounts } = this.props;
-      await marketplace.methods
+      const { contracts, accounts } = this.props;
+      await contracts.marketplace.methods
         .buyListing(itemID, publicKey)
         .send({ from: accounts[0] });
+      await this.getListings();
+
+      // TODO: Change to modal
+      alert(`This is your private key. Store it securely to complete the transaction. ${privateKey}`);
+    } catch (ex) {
+      console.log("Error while purchasing listing", ex);
+    }
+  };
+
+  makeAuctionBid = async (itemID, saleType) => {
+    try {
+      const { privateKey, publicKey } = EthCrypto.createIdentity();
+      const { contracts, accounts } = this.props;
+      const amount = prompt("Please enter your bid amount:")
+      const amountHash = web3.utils.soliditySha3(amount)
+      await contracts[this.contractState[saleType]].methods
+      .buyListing(itemID, amountHash, publicKey)
+      .send({ from: accounts[0] });
       await this.getListings();
 
       // TODO: Change to modal
@@ -75,14 +113,23 @@ class Marketplace extends React.Component {
                       <td key={id + "a"}>{id + 1}</td>
                       <td key={id + "b"}>{listing.itemName}</td>
                       <td key={id + "c"}>{listing.itemDesc}</td>
-                      <td key={id + "d"}>{listing.askingPrice}</td>
-                      <td key={id + "e"}>{0}</td>
+                      <td key={id + "d"}>{listing.saleType === 0 ? (listing.askingPrice) : ("n/a")}</td>
+                      <td key={id + "e"}>{this.saleState[listing.saleType]}</td>
                       <td key={id + "f"}>
-                        <Button
-                          onClick={() => this.buyListings(listing.listingID)}
-                        >
-                          Purchase
-                        </Button>
+                        { listing.saleType === 0 ? (
+                          <Button
+                            onClick={() => this.buyMarketplaceListings(listing.listingID)}
+                          >
+                            Purchase
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => this.makeAuctionBid(listing.listingID,listing.saleType)}
+                          >
+                            Make Bid
+                          </Button>
+                        )
+                        }
                       </td>
                     </tr>
                   ))}

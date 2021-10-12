@@ -6,12 +6,13 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { useFormik } from "formik";
 
-function CreateListing({ marketplace, accounts }) {
+function CreateListing({ contracts, accounts }) {
+  
   const formik = useFormik({
     initialValues: {
       itemName: "",
       itemDesc: "",
-      isAuctioned: false,
+      saleType: 0,
       askingPrice: 0,
     },
   });
@@ -21,12 +22,33 @@ function CreateListing({ marketplace, accounts }) {
       event.preventDefault();
     }
 
-    // TODO: Add `isAuctioned` once implemented and remove `item`
     try {
-      const { askingPrice, itemName, itemDesc, isAuctioned } = formik.values;
-      await marketplace.methods
-        .createListing(askingPrice, itemName, itemDesc)
-        .send({ from: accounts[0] });
+      const { askingPrice, itemName, itemDesc, saleType } = formik.values;
+      if(saleType === 0)
+      {  
+        await contracts.marketplace.methods
+          .createListing(askingPrice, itemName, itemDesc)
+          .send({ from: accounts[0] });
+      }
+      else if(saleType === 1)
+      {
+        await contracts.firstAccount.methods
+          .createListing(itemName, itemDesc)
+          .send({ from: accounts[0] });
+      }
+      else if(saleType === 2)
+      {
+        await contracts.secondAccount.methods
+          .createListing(itemName, itemDesc)
+          .send({ from: accounts[0] });
+      }
+      else if(saleType === 3)
+      {
+        await contracts.averageAccount.methods
+          .createListing(itemName, itemDesc)
+          .send({ from: accounts[0] });
+      }
+
     } catch (ex) {
       console.log("Error while creating listing", ex);
     }
@@ -60,13 +82,16 @@ function CreateListing({ marketplace, accounts }) {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Check
-                id="isAuctioned"
-                type="checkbox"
-                label="Auction"
-                value={formik.values.isAuctioned}
+              <Form.Select
+                id="saleType"
+                value={formik.values.saleType}
                 onChange={formik.handleChange}
-              />
+              >
+                <option value="0">First Bid Winner</option>
+                <option value="1">First-price sealed-bid auction</option>
+                <option value="2">Second-price sealed-bid auction</option>
+                <option value="3">Average price auction</option>
+              </Form.Select>
             </Form.Group>
             <Row>
               <Col xs={6}>
