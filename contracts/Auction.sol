@@ -1,14 +1,20 @@
-// pragma solidity >0.4.23 <0.7.0;
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
+
+/// @title Extension for Marketplace to add Auctions
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Do not deploy
+/// @dev Parent class for the other contracts.
 contract AuctionParent {
+    /// @dev structure to contain all the information about bids made.
     struct Bid {
-        // the hash
         bytes32 blindedBid;
         uint value;
     }
 
-    // seller input stuff
+    /// @dev structure to store all the details about the product 
+    /// which is being auctioned.
     struct Details {
         address payable beneficiary;
         uint biddingEnd;
@@ -20,20 +26,38 @@ contract AuctionParent {
 
     mapping(address => Bid) public bids;
 
+    /// @dev Finaly bidder and the bid that won the auction. 
     address payable public requiredBidder;
     uint public requiredBid;
 
-    /// Ensures time reqiurements
-    modifier onlyBefore(uint _time) { require(block.timestamp < _time); _; }
-    modifier onlyAfter(uint _time) { require(block.timestamp > _time); _; }
+    /// @notice Modifiers for ensuring the events happen before _time
+    /// @param _time parameter for checking validity.
+    modifier onlyBefore(uint _time) { 
+        require(block.timestamp < _time); _;}
+    /// @notice Modifiers for ensuring the events happen after _time
+    /// @param _time parameter for checking validity.
+    modifier onlyAfter(uint _time) { 
+        require(block.timestamp > _time); _;}
 
     
+    /// @notice Triggered to store the details of the created auction.
+    /// @dev Must not store the item itself for privacy.
+    /// @param beneficiary The seller's address .
+    /// @param biddingEnd Time in epoch which marks the end of bidding time.
+    /// @param revealEnd Time in epoch which marks the end of revealing time.
+    /// @param item The item of auction.
     event AuctionCreated ( 
         address beneficiary,
         uint biddingEnd,
         uint revealEnd,
         string item 
     );
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs.
+    /// @param _biddingTime Time in seconds for bidding time.
+    /// @param _revealTime Time in seconds for revealing time.
+    /// @param _beneficiary Address for the sellers address.
+    /// @param _item the item on auction.
     constructor(
         uint _biddingTime,
         uint _revealTime,
@@ -52,70 +76,91 @@ contract AuctionParent {
         );
     }
 
+    /// @notice Triggered to store the bidder details and hash.
+    /// @dev Hash was the default etheruem hash.
+    /// @param bidder address of the bidder.
+    /// @param blindedBid Encrypted amount.
     event BidMade (
         address bidder,
         bytes32 blindedBid
     );
-    /// Send the bit _blindedBid is the hash of the amount
-    function bid(bytes32 _blindedBid)
+
+    /// @notice Function called by the buyer to make a bid.
+    /// @param _blindedBid Encrypted amount.
+    function bid(bytes32 _blindedBid, address payable _bidder)
         public
-        onlyBefore(details.biddingEnd) // must be before the auction ends.
+        onlyBefore(details.biddingEnd)
     {
-        bids[msg.sender] = Bid({
+        // Only single bid is allowed.
+        bids[_bidder] = Bid({
             blindedBid: _blindedBid,
             value: 0
-        }); // Only single bid is allowed.
+        }); 
         emit BidMade(
-            msg.sender,
+            _bidder,
             _blindedBid
         );
     }
 
+    /// @notice Triggered to store the bidders reveal state. 
+    /// @param bidder address of the bidder.
+    /// @param bidValue the value claimed by the bidder.
+    /// @param isCorrect Indicating the correctness of the claim. 
     event RevealMade(
         address bidder,
         uint bidValue,
         bool isCorrect
     );
-    /// Reveal your blinded bids. 
-    function reveal(uint value)
-        public
-        onlyAfter(details.biddingEnd) 
-        onlyBefore(details.revealEnd) 
+
+    /// @notice Called by buyer to reveal the bids he had made.
+    /// @dev placeBid is different for different kinds of auction.
+    /// @param value The value that is claimed by the buyer.
+    function reveal(uint value, address payable beneficiary)
+    onlyAfter(details.biddingEnd)
+    onlyBefore(details.revealEnd)
+        public returns (bool)
     {
-        if (bids[msg.sender].blindedBid != keccak256(abi.encodePacked(value))) {
+        if (bids[beneficiary].blindedBid != keccak256(abi.encodePacked(value))) {
             // Bid was not actually revealed.
             // Do not refund deposit.
             emit RevealMade(
-                msg.sender,
+                beneficiary,
                 value,
                 false
             );
-            return;
+            return false;
         }
 
-        placeBid(msg.sender, value);
+        placeBid(beneficiary, value);
         /// Make it impossible for the sender to re-claim
-        bids[msg.sender].blindedBid = bytes32(0);
+        bids[beneficiary].blindedBid = bytes32(0);
         emit RevealMade(
-            msg.sender,
+            beneficiary,
             value,
             true
         );
+        return true;
     }
-    /// The appropriate bid 
+
+    /// @notice Function to be overloaded by the children contract classes.
+    /// @param value The value that is claimed by the buyer.
     function placeBid(address payable bidder, uint value) internal
     {
         require(true, "Child class does not have the appropriate function");
     }
 
-    /// End the auction and send the highest bid to the beneficiary.
+    /// @notice Triggered to store the details of the auction winner.
+    /// @param winner Address of the auction winner.
+    /// @param finalPrice Price the auction winner has to pay.
     event AuctionEnded(
         address winner,
         uint finalPrice
     );
+
+    /// @notice Triggered to return the details of the auction winner.
+    /// @return Address of the auction winner.
     function auctionEnd()
         public
-        onlyAfter(details.revealEnd)
         returns (address payable)
     {
         require(!details.ended);
@@ -129,11 +174,15 @@ contract AuctionParent {
         return details.beneficiary;
     }
     
+    /// @notice Function to trigger before ending the auction.
+    /// @dev Overloaded by the children contracts.
     function endTrigger() internal {
         require(true, "Child class does not have the appropriate function");
         return;
     }
 
+    /// @notice Fetches the details of the auction.
+    /// @return details structure of the cnotract.
     function fetchDetails() public view returns (Details memory) {
         Details memory newDetails = Details(
             details.beneficiary,
@@ -145,31 +194,51 @@ contract AuctionParent {
 
         return newDetails;
     }
-    function fetchBid() public view returns (Bid memory returnBid) {
-        return bids[msg.sender];
-    }
 
+    /// @notice Fetches the bid status of the given address.
+    /// @return Details of the bid.
     function fetchBidFromAddress(address bidder) 
             public view returns (Bid memory returnBid) 
     {
         return bids[bidder];
     }
+    function fetchBidValueFromAddress(address bidder) 
+            public view returns (uint) 
+    {
+        return bids[bidder].value;
+    }
 }
 
+/// @title Auction where the highest bidder has to pay the amount they bid.
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Called from marketplace.
 contract FirstPrice is AuctionParent {
-    /// The highest bid is the winner
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs and calls the parent constructor.
+    /// @param _biddingTime Time in seconds for bidding time.
+    /// @param _revealTime Time in seconds for revealing time.
+    /// @param _item the item on auction.
     constructor(
         uint _biddingTime,
         uint _revealTime,
-        string memory _item
-    ) public AuctionParent(_biddingTime, _revealTime, msg.sender, _item) { }
-    
+        string memory _item,
+        address payable _beneficiary
+    ) public AuctionParent(_biddingTime, _revealTime, _beneficiary, _item) { }
+    /// @notice Triggered to store the bid and the old value stored. 
+    /// @param oldBidder The bidder that was before the current bid.
+    /// @param oldValue The value before this bid.
+    /// @param doesReplace Indicator if the bid replaced the required bid.
     event PlaceBidFirst(
         address oldBidder,
         uint oldValue,
         bool doesReplace
     );
 
+    /// @notice Function that will update required bidder.
+    /// @dev Required bidder details are overwritten if the current bid is 
+    ///      higher.
+    /// @param bidder Address of the bidder.
+    /// @param value The bid amount.
     function placeBid(address payable bidder, uint value) internal 
     {
         if (value <= requiredBid) {
@@ -189,27 +258,46 @@ contract FirstPrice is AuctionParent {
         requiredBidder = bidder;
     }
     
+    /// @notice Function to trigger before ending the auction.
+    /// @dev No triggers.
     function endTrigger() internal {
-        // no triggers
         return;
     }
 }
 
+/// @title Auction where the highest bidder has to pay the second highest amount.
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Called from marketplace.
 contract SecondPrice is AuctionParent {
-    /// The highest bid is the winner but the price is second highest
+    /// @dev structure to contain all the information about bids made.
     uint public highestBid;
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs and calls the parent constructor.
+    /// @param _biddingTime Time in seconds for bidding time.
+    /// @param _revealTime Time in seconds for revealing time.
+    /// @param _item the item on auction.
     constructor(
         uint _biddingTime,
         uint _revealTime,
-        string memory _item
-    ) public AuctionParent(_biddingTime, _revealTime, msg.sender, _item) { }
+        string memory _item,
+        address payable _beneficiary
+    ) public AuctionParent(_biddingTime, _revealTime, _beneficiary, _item) { }
     
+    /// @notice Triggered to store the bid and the old value stored. 
+    /// @param oldBidder The bidder that was before the current bid.
+    /// @param oldValue The value before this bid.
+    /// @param doesReplace Indicator if the bid replaced the required bid.
     event PlaceBidSecond(
         address oldBidder,
         uint oldValue,
         bool doesReplace
     );
 
+    /// @notice Function that will update required bidder.
+    /// @dev Required bidder details are overwritten if the current bid is 
+    ///      higher. But the value required to be paid is second highest.
+    /// @param bidder Address of the bidder.
+    /// @param value The bid amount.
     function placeBid(address payable bidder, uint value) internal 
     {
         if (value <= highestBid) {
@@ -234,35 +322,50 @@ contract SecondPrice is AuctionParent {
         requiredBidder = bidder;
     }
     
+    /// @notice Function to trigger before ending the auction.
+    /// @dev No triggers.
     function endTrigger() internal {
-        // no triggers
         return;
     }
 }
 
+/// @title Auction where the bidder closest to the average value wins.
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Called from marketplace.
 contract AveragePrice is AuctionParent {
-    // The bid closest to the average bid is the winner.
+    /// @dev map to bid values
     mapping(address => uint) public bidValues;
     mapping(uint => address payable) public bidders;
-    mapping (uint => address payable) public validBidders;
     uint bidderCount = 0;
     
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs.
+    /// @param _biddingTime Time in seconds for bidding time.
+    /// @param _revealTime Time in seconds for revealing time.
+    /// @param _item the item on auction.
     constructor(
         uint _biddingTime,
         uint _revealTime,
-        string memory _item
-    ) public AuctionParent(_biddingTime, _revealTime, msg.sender, _item) { }
+        string memory _item,
+        address payable _beneficiary
+    ) public AuctionParent(_biddingTime, _revealTime, _beneficiary, _item) { }
     
+    /// @notice Function that will store the bidder details.
+    /// @dev Just stores the values since the average can only be calcualated
+    ///      at the end.
+    /// @param bidder Address of the bidder.
+    /// @param value The bid amount.
     function placeBid(address payable bidder, uint value) internal 
     {
-        // can be assumed that the bid is valid since the verification happens
-        // first.
         bidders[bidderCount] = bidder;
         bidderCount += 1;
         bidValues[bidder] = value;
     }
     
-    // calculating the average of the valid bids
+    /// @notice Triggered at the end to calculate the average and set the 
+    ///         requiredBidder.
+    /// @dev Just stores the values since the average can only be calcualated
+    ///      at the end.
     function endTrigger() internal {
         uint total = 0;
         

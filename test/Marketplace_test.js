@@ -188,30 +188,4 @@ contract("Marketplace", (accounts) => {
     assert.equal(log.args.uniqueSellerID, accounts[0]);
     assert.equal(log.args.uniqueBuyerID, accounts[1]);
   });
-
-  it("Checks if bought items are being relisted properly", async () => {
-    await marketplace.createListing(
-      listingObj.price,
-      listingObj.itemName,
-      listingObj.itemDesc,
-      listingObj.item,
-      { from: accounts[0] }
-    );
-
-    await marketplace.buyListing(0, { from: accounts[1] });
-
-    const tx = await marketplace.relistListing(0, listingObj.item + 0, {
-      from: accounts[0],
-    });
-    const { logs } = tx;
-    assert.ok(Array.isArray(logs));
-    assert.equal(logs.length, 1);
-
-    const log = logs[0];
-    assert.equal(log.event, "ListingCreated");
-    assert.equal(log.args.itemName.toString(), listingObj.itemName);
-    assert.equal(log.args.listingID, 0);
-    assert.equal(log.args.askingPrice, listingObj.price);
-    assert.equal(log.args.uniqueSellerID, accounts[0]);
-  });
 });

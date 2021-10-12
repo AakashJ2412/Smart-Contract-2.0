@@ -121,12 +121,21 @@ contract Marketplace {
         address uniqueBuyerID
     );
 
-    /// TODO: Write this later
+    /// @notice Function to fetch an individual item via itemId
+    /// @dev Item password is encrypted or null at all times
+    /// @param itemID Unique Id for the listing
+    /// @return Listing Object for the particular item ID
     function fetchItem(uint itemId) public view returns (Listing memory) {
       return listings[itemId];
     }
 
-    /// TODO: Write this later
+    /// @notice Function to store the encrypted password in the listing object
+    /// @dev item password is encrypted before sending to frontend
+    /// @param itemID Unique Id for the listing
+    /// @param iv Initialization vector for the password's encryption
+    /// @param ephemPublicKey Seller's ephemeral public key 
+    /// @param ciphertext Encrypted password string
+    /// @param mac Checksum to maintain integrity of the message
     function setItem(
       uint itemId,
       string memory iv,
@@ -134,13 +143,14 @@ contract Marketplace {
       string memory ciphertext,
       string memory mac
     ) public {
-      require(msg.sender == listings[itemId].uniqueSellerID, "Can't set");
+      require(msg.sender == listings[itemId].uniqueSellerID, "Invalid user, not the seller");
       listings[itemId].item = Encrypted(
         iv,
         ephemPublicKey,
         ciphertext,
         mac
       ); 
+      listings[itemId].state = State.PENDING;
     }
 
     /// @notice Function to print all the active listings
@@ -207,7 +217,7 @@ contract Marketplace {
     /// @dev Triggers the event for logging
     /// @param itemId The item the buyer wants to confirm
     function confirmListing(uint itemId) external payable {
-        require(listings[itemId].state == State.SOLD && listings[itemId].uniqueBuyerID == msg.sender, "Can't confirm");
+        require(listings[itemId].state == State.PENDING && listings[itemId].uniqueBuyerID == msg.sender, "Can't confirm");
         require(msg.value >= listings[itemId].askingPrice, "Insufficient funds");
         listings[itemId].state = State.DELIVERED;
         require(listings[itemId].uniqueSellerID.send(listings[itemId].askingPrice), "Failed to transfer");
@@ -217,22 +227,6 @@ contract Marketplace {
             listings[itemId].itemName,
             listings[itemId].askingPrice,
             listings[itemId].uniqueSellerID,
-            msg.sender
-        );
-    }
-
-    /// @notice Function to allow seller to relist the item if the buyer doesn't send correct amount of Ether, doesn't confirm the delivery or change the password
-    /// @param itemId The item the buyer wants to confirm
-    /// @param item The new item (i.e the hashed password)
-    function relistListing(uint itemId, string calldata item) external {
-        require(listings[itemId].state != State.DELIVERED && listings[itemId].uniqueSellerID == msg.sender, "Can't relist");
-        listings[itemId].state = State.UNSOLD;
-        itemSold -= 1;
-
-        emit ListingCreated(
-            itemId,
-            listings[itemId].itemName,
-            listings[itemId].askingPrice,
             msg.sender
         );
     }

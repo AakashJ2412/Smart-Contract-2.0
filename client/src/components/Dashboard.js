@@ -11,9 +11,10 @@ class Dashboard extends React.Component {
   itemState = {
     0: "Unsold",
     1: "Sold",
-    2: "Delivered",
-    3: "Bidding",
-    4: "Revealed",
+    2: "Pending",
+    3: "Delivered",
+    4: "Bidding",
+    5: "Revealed",
   };
 
   constructor(props) {
@@ -41,7 +42,7 @@ class Dashboard extends React.Component {
       ret.forEach((item) => {
         if (this.props.accounts[0] === item.uniqueSellerID) {
           soldList.push(item);
-        } else if (item.state === "1" || item.state === "2") {
+        } else if (this.props.accounts[0] == item.uniqueBuyerID) {
           boughtList.push(item);
         }
       });
@@ -61,7 +62,7 @@ class Dashboard extends React.Component {
       const item = await marketplace.methods.fetchItem(itemID).call();
 
       // Fetch and encrypt the password with buyers public key
-      const pwd = prompt("Gimme password!!!");
+      const pwd = prompt("Please enter the product's password:");
       const encrypted = await EthCrypto.encryptWithPublicKey(
         item.buyerPubKey,
         pwd
@@ -88,7 +89,7 @@ class Dashboard extends React.Component {
       const { accounts, marketplace } = this.props;
 
       // Decrypt the item
-      const privateKey = prompt("Gimme private!!");
+      const privateKey = prompt("Please enter the provided private key:");
       const item = await marketplace.methods.fetchItem(itemID).call();
       const pwd = await EthCrypto.decryptWithPrivateKey(privateKey, item.item);
 
@@ -96,24 +97,11 @@ class Dashboard extends React.Component {
         .confirmListing(itemID)
         .send({ from: accounts[0], value: Web3.utils.toWei(price, "ether") });
 
-      alert(`Here you go: ${pwd}`);
+      alert(`Thank you for your purchase. The password for your product is: ${pwd}`);
 
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while confirming listing", ex);
-    }
-  };
-
-  // TODO: Remove later
-  relistListings = async (itemID, item) => {
-    try {
-      const { accounts, marketplace } = this.props;
-      await marketplace.methods
-        .relistListing(itemID, item)
-        .send({ from: accounts[0] });
-      await this.getUserListings();
-    } catch (ex) {
-      console.log("Error while relisting listing", ex);
     }
   };
 
@@ -191,7 +179,7 @@ class Dashboard extends React.Component {
                       <td key={id + "d"}>{listing.askingPrice}</td>
                       <td key={id + "e"}>{0}</td>
                       <td key={id + "f"}>{this.itemState[listing.state]}</td>
-                      {listing.state === "1" && (
+                      {listing.state === "2" && (
                         <td>
                           <Button
                             onClick={() =>
