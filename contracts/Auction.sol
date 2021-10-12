@@ -62,7 +62,7 @@ contract AuctionParent {
 
     /// @notice check function to see if bid was made by address or not
     /// @return boolean result
-    function checkBid(address payable buyer) public returns (bool) {
+    function checkBid(address buyer) public view returns (bool) {
         if (bids[buyer].blindedBid != 0) {
             return true;
         }  

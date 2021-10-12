@@ -57,17 +57,16 @@ class Dashboard extends React.Component {
     const soldList = [];
     const boughtList = [];
 
-    for (var i = 0; i < 4; i++) {
+    for (let i = 0; i < 4; i++) {
       var ret = await this.props.contracts[this.contractState[i]].methods
         .fetchUserItems()
-        .call();
+        .call({ from: this.props.accounts[0] });
       if (ret) {
         ret.forEach((item) => {
-          console.log(item);
           if (this.props.accounts[0] === item.uniqueSellerID) {
             item.saleType = i;
             soldList.push(item);
-          } else if (this.props.accounts[0] == item.uniqueBuyerID) {
+          } else {
             item.saleType = i;
             boughtList.push(item);
           }
@@ -85,7 +84,9 @@ class Dashboard extends React.Component {
   endBiddingListings = async (itemID, saleType) => {
     try {
       const { contracts } = this.props;
-      await contracts[this.contractState[saleType]].methods.endBidding(itemID);
+      await contracts[this.contractState[saleType]].methods
+        .endBidding(itemID)
+        .send({ from: this.props.accounts[0] });
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while ending bidding period", ex);
@@ -95,9 +96,9 @@ class Dashboard extends React.Component {
   endRevealListings = async (itemID, saleType) => {
     try {
       const { contracts } = this.props;
-      var res = await contracts[
-        this.contractState[saleType]
-      ].methods.endListing(itemID);
+      var res = await contracts[this.contractState[saleType]].methods
+        .endListing(itemID)
+        .send({ from: this.props.accounts[0] });
       if (res === this.props.accounts[0])
         alert(`Your item wasn't bid upon, and has not been sold`);
       else
