@@ -1,7 +1,5 @@
-const SecondPrice = artifacts.require("SecondPrice");
-const AveragePrice = artifacts.require("AveragePrice");
-
+const SecondAuction = artifacts.require("SecondAuction");
 
 module.exports = function (deployer) {
-    deployer.deploy(SecondPrice);
+    deployer.deploy(SecondAuction);
 };

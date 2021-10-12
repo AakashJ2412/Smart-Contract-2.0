@@ -1,5 +1,5 @@
-const FirstPrice = artifacts.require("FirstPrice");
+const FirstAuction = artifacts.require("FirstAuction");
 
 module.exports = function (deployer) {
-    deployer.deploy(FirstPrice);
+    deployer.deploy(FirstAuction);
 };

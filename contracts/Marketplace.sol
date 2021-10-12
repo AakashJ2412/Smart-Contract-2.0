@@ -123,7 +123,7 @@ contract Marketplace {
 
     /// @notice Function to fetch an individual item via itemId
     /// @dev Item password is encrypted or null at all times
-    /// @param itemID Unique Id for the listing
+    /// @param itemId Unique Id for the listing
     /// @return Listing Object for the particular item ID
     function fetchItem(uint itemId) public view returns (Listing memory) {
       return listings[itemId];
@@ -131,7 +131,7 @@ contract Marketplace {
 
     /// @notice Function to store the encrypted password in the listing object
     /// @dev item password is encrypted before sending to frontend
-    /// @param itemID Unique Id for the listing
+    /// @param itemId Unique Id for the listing
     /// @param iv Initialization vector for the password's encryption
     /// @param ephemPublicKey Seller's ephemeral public key 
     /// @param ciphertext Encrypted password string

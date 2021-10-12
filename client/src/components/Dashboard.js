@@ -79,6 +79,7 @@ class Dashboard extends React.Component {
         .send({
           from: accounts[0],
         });
+        await this.getUserListings();
     } catch (ex) {
       console.log("Error while delivering item", ex);
     }

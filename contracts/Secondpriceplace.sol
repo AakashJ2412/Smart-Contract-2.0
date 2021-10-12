@@ -103,7 +103,7 @@ contract SecondAuction {
         listings[itemId].state = State.DELIVERED;
         address payable buyer = msg.sender;
         uint value = listings[itemId].auction.fetchBidValueFromAddress(buyer);
-        msg.sender.send(value);
+        require(msg.sender.send(value), "Failed to transfer");
     }
 
     /// @notice Function for the seller to add the string encrypted with winner's public key.

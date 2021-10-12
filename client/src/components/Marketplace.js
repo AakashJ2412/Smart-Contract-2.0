@@ -45,7 +45,7 @@ class Marketplace extends React.Component {
       await this.getListings();
 
       // TODO: Change to modal
-      alert(`Your private key. Don't forget. ${privateKey}`);
+      alert(`This is your private key. Store it securely to complete the transaction. ${privateKey}`);
     } catch (ex) {
       console.log("Error while purchasing listing", ex);
     }
