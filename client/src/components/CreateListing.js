@@ -7,12 +7,11 @@ import Form from "react-bootstrap/Form";
 import { useFormik } from "formik";
 
 function CreateListing({ contracts, accounts }) {
-  
   const formik = useFormik({
     initialValues: {
       itemName: "",
       itemDesc: "",
-      saleType: 0,
+      saleType: "0",
       askingPrice: 0,
     },
   });
@@ -24,31 +23,23 @@ function CreateListing({ contracts, accounts }) {
 
     try {
       const { askingPrice, itemName, itemDesc, saleType } = formik.values;
-      if(saleType === 0)
-      {  
+      if (saleType === "0") {
         await contracts.marketplace.methods
           .createListing(askingPrice, itemName, itemDesc)
           .send({ from: accounts[0] });
-      }
-      else if(saleType === 1)
-      {
-        await contracts.firstAccount.methods
+      } else if (saleType === "1") {
+        await contracts.firstAuction.methods
+          .createListing(itemName, itemDesc)
+          .send({ from: accounts[0] });
+      } else if (saleType === "2") {
+        await contracts.secondAuction.methods
+          .createListing(itemName, itemDesc)
+          .send({ from: accounts[0] });
+      } else if (saleType === "3") {
+        await contracts.averageAuction.methods
           .createListing(itemName, itemDesc)
           .send({ from: accounts[0] });
       }
-      else if(saleType === 2)
-      {
-        await contracts.secondAccount.methods
-          .createListing(itemName, itemDesc)
-          .send({ from: accounts[0] });
-      }
-      else if(saleType === 3)
-      {
-        await contracts.averageAccount.methods
-          .createListing(itemName, itemDesc)
-          .send({ from: accounts[0] });
-      }
-
     } catch (ex) {
       console.log("Error while creating listing", ex);
     }
@@ -82,20 +73,21 @@ function CreateListing({ contracts, accounts }) {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Select
+              <Form.Control
                 id="saleType"
                 value={formik.values.saleType}
                 onChange={formik.handleChange}
+                as="select"
               >
                 <option value="0">First Bid Winner</option>
                 <option value="1">First-price sealed-bid auction</option>
                 <option value="2">Second-price sealed-bid auction</option>
                 <option value="3">Average price auction</option>
-              </Form.Select>
+              </Form.Control>
             </Form.Group>
             <Row>
               <Col xs={6}>
-                {!formik.values.isAuctioned && (
+                {formik.values.saleType === "0" && (
                   <Form.Group className="mb-3">
                     <Form.Label>Item Price</Form.Label>
                     <Form.Control

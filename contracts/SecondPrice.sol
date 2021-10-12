@@ -8,7 +8,7 @@ import { FirstPrice } from "./Auction.sol";
 /// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
 /// @notice View, sell, and bid items.
 /// @dev It is assumed that the seller will deliver after getting paid.
-contract FirstAuction {
+contract SecondAuction {
     /// @dev Possible states that a Listing can take.
     enum State { BIDDING, REVEAL, SOLD, PENDING, DELIVERED, UNSOLD }
 
@@ -176,12 +176,10 @@ contract FirstAuction {
     /// @notice Function to print all listings of a particular user
     /// @dev Listing password is being filtered from listings
     /// @return Listing The list of all listings of a certain address
-    function fetchUserItems() public returns (Listing[] memory) {
+    function fetchUserItems() public view returns (Listing[] memory) {
         uint cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
-            if (listings[i].uniqueSellerID == msg.sender
-                || listings[i].uniqueBuyerID == msg.sender) {
-                // || listings[i].auction.checkBid(msg.sender)) {
+            if (listings[i].uniqueSellerID == msg.sender || listings[i].uniqueBuyerID == msg.sender) {
                 cnt += 1;
             }
         }
@@ -189,9 +187,7 @@ contract FirstAuction {
         Listing[] memory items = new Listing[](cnt);
         cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
-            if (listings[i].uniqueSellerID == msg.sender
-                || listings[i].uniqueBuyerID == msg.sender) {
-                // || listings[i].auction.checkBid(msg.sender)) {
+            if (listings[i].uniqueSellerID == msg.sender || listings[i].uniqueBuyerID == msg.sender) {
                 Listing memory currentItem = listings[i];
                 items[cnt] = currentItem;
                 cnt += 1;

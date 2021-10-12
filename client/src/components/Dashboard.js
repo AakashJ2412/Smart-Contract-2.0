@@ -28,7 +28,7 @@ class Dashboard extends React.Component {
     0: "First bid winner",
     1: "First-price sealed-bid auction",
     2: "Second-price sealed-bid auction",
-    3: "Average price auction"
+    3: "Average price auction",
   };
 
   contractState = {
@@ -36,7 +36,7 @@ class Dashboard extends React.Component {
     1: "firstAuction",
     2: "secondAuction",
     3: "averageAuction",
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -57,10 +57,13 @@ class Dashboard extends React.Component {
     const soldList = [];
     const boughtList = [];
 
-    for(var i=0;i<4;i++) {
-      var ret = await this.props.contracts[this.contractState[i]].methods.fetchUserItems().call();
+    for (var i = 0; i < 4; i++) {
+      var ret = await this.props.contracts[this.contractState[i]].methods
+        .fetchUserItems()
+        .call();
       if (ret) {
         ret.forEach((item) => {
+          console.log(item);
           if (this.props.accounts[0] === item.uniqueSellerID) {
             item.saleType = i;
             soldList.push(item);
@@ -79,50 +82,54 @@ class Dashboard extends React.Component {
     });
   };
 
-  endBiddingListings = async(itemID, saleType) => {
+  endBiddingListings = async (itemID, saleType) => {
     try {
-      const {contracts} = this.props;
-      await contracts[this.contractState[saleType]].methods
-        .endBidding(itemID)
+      const { contracts } = this.props;
+      await contracts[this.contractState[saleType]].methods.endBidding(itemID);
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while ending bidding period", ex);
     }
   };
 
-  endRevealListings = async(itemID, saleType) => {
+  endRevealListings = async (itemID, saleType) => {
     try {
-      const {contracts} = this.props;
-      var res = await contracts[this.contractState[saleType]].methods
-        .endListing(itemID)
-        if(res === this.props.accounts[0])
-          alert(`Your item wasn't bid upon, and has not been sold`);
-        else
-          alert(`Your auction is completed. The winner for your auction is: ${res}`);
+      const { contracts } = this.props;
+      var res = await contracts[
+        this.contractState[saleType]
+      ].methods.endListing(itemID);
+      if (res === this.props.accounts[0])
+        alert(`Your item wasn't bid upon, and has not been sold`);
+      else
+        alert(
+          `Your auction is completed. The winner for your auction is: ${res}`
+        );
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while ending reveal period", ex);
     }
   };
 
-  revealBid = async(itemID, saleType) => {
+  revealBid = async (itemID, saleType) => {
     try {
       const { contracts, accounts } = this.props;
-      const amount = prompt("Please enter your bid amount:")
+      const amount = prompt("Please enter your bid amount:");
       await contracts[this.contractState[saleType]].methods
         .revealListing(itemID, amount)
-        .send({from: accounts[0]});
+        .send({ from: accounts[0] });
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while trying to submit bid", ex);
     }
-  }
+  };
 
   deliverListings = async (itemID, saleType) => {
     try {
       // TODO: Make modal
       const { contracts, accounts } = this.props;
-      const item = await contracts[this.contractState[saleType]].methods.fetchItem(itemID).call();
+      const item = await contracts[this.contractState[saleType]].methods
+        .fetchItem(itemID)
+        .call();
 
       // Fetch and encrypt the password with buyers public key
       const pwd = prompt("Please enter the product's password:");
@@ -142,7 +149,7 @@ class Dashboard extends React.Component {
         .send({
           from: accounts[0],
         });
-        await this.getUserListings();
+      await this.getUserListings();
     } catch (ex) {
       console.log("Error while delivering item", ex);
     }
@@ -154,14 +161,18 @@ class Dashboard extends React.Component {
 
       // Decrypt the item
       const privateKey = prompt("Please enter the provided private key:");
-      const item = await contracts[this.contractState[saleType]].methods.fetchItem(itemID).call();
+      const item = await contracts[this.contractState[saleType]].methods
+        .fetchItem(itemID)
+        .call();
       const pwd = await EthCrypto.decryptWithPrivateKey(privateKey, item.item);
 
       await contracts[this.contractState[saleType]].methods
         .confirmListing(itemID)
         .send({ from: accounts[0], value: Web3.utils.toWei(price, "ether") });
 
-      alert(`Thank you for your purchase. The password for your product is: ${pwd}`);
+      alert(
+        `Thank you for your purchase. The password for your product is: ${pwd}`
+      );
 
       await this.getUserListings();
     } catch (ex) {
@@ -195,16 +206,23 @@ class Dashboard extends React.Component {
                       <td key={id + "a"}>{id + 1}</td>
                       <td key={id + "b"}>{listing.itemName}</td>
                       <td key={id + "c"}>{listing.itemDesc}</td>
-                      <td key={id + "d"}>{listing.saleType === 0 ? (listing.askingPrice) : ("n/a")}</td>
+                      <td key={id + "d"}>
+                        {listing.saleType === 0 ? listing.askingPrice : "n/a"}
+                      </td>
                       <td key={id + "e"}>{this.saleState[listing.saleType]}</td>
-                      <td key={id + "f"}>{listing.saleType === 0 ? (this.marketplaceState[listing.state]) : (this.auctionState[listing.state])}</td>
-                      {((listing.saleType === 0 && listing.state === "1") || (listing.saleType > 0 && listing.state === "2")) && (
+                      <td key={id + "f"}>
+                        {listing.saleType === 0
+                          ? this.marketplaceState[listing.state]
+                          : this.auctionState[listing.state]}
+                      </td>
+                      {((listing.saleType === 0 && listing.state === "1") ||
+                        (listing.saleType > 0 && listing.state === "2")) && (
                         <td>
                           <Button
                             onClick={() =>
                               this.deliverListings(
                                 listing.listingID,
-                                listing.item
+                                listing.saleType
                               )
                             }
                           >
@@ -212,7 +230,7 @@ class Dashboard extends React.Component {
                           </Button>
                         </td>
                       )}
-                      {(listing.saleType > 0 && listing.state === "0") && (
+                      {listing.saleType > 0 && listing.state === "0" && (
                         <td>
                           <Button
                             onClick={() =>
@@ -224,19 +242,9 @@ class Dashboard extends React.Component {
                           >
                             End Bidding Phase
                           </Button>
-                          <Button
-                            onClick={() =>
-                              this.endRevealListings(
-                                listing.listingID,
-                                listing.saleType
-                              )
-                            }
-                          >
-                            End Reveal Phase
-                          </Button>
                         </td>
                       )}
-                      {(listing.saleType > 0 && listing.state === "1") && (
+                      {listing.saleType > 0 && listing.state === "1" && (
                         <td>
                           <Button
                             onClick={() =>
@@ -278,16 +286,24 @@ class Dashboard extends React.Component {
                       <td key={id + "a"}>{id + 1}</td>
                       <td key={id + "b"}>{listing.itemName}</td>
                       <td key={id + "c"}>{listing.itemDesc}</td>
-                      <td key={id + "d"}>{listing.saleType === 0 ? (listing.askingPrice) : ("n/a")}</td>
+                      <td key={id + "d"}>
+                        {listing.saleType === 0 ? listing.askingPrice : "n/a"}
+                      </td>
                       <td key={id + "e"}>{this.saleState[listing.saleType]}</td>
-                      <td key={id + "f"}>{listing.saleType === 0 ? (this.marketplaceState[listing.state]) : (this.auctionState[listing.state])}</td>
-                      {((listing.saleType === 0 && listing.state === "2") || (listing.saleType > 0 && listing.state === "3")) && (
+                      <td key={id + "f"}>
+                        {listing.saleType === 0
+                          ? this.marketplaceState[listing.state]
+                          : this.auctionState[listing.state]}
+                      </td>
+                      {((listing.saleType === 0 && listing.state === "2") ||
+                        (listing.saleType > 0 && listing.state === "3")) && (
                         <td>
                           <Button
                             onClick={() =>
                               this.confirmListings(
                                 listing.listingID,
-                                listing.askingPrice
+                                listing.askingPrice,
+                                listing.saleType
                               )
                             }
                           >
@@ -295,19 +311,19 @@ class Dashboard extends React.Component {
                           </Button>
                         </td>
                       )}
-                      {(listing.saleType > 0 && listing.state === "1") && (
+                      {listing.saleType > 0 && listing.state === "1" && (
                         <td>
-                        <Button
-                          onClick={() =>
-                            this.revealBid(
-                              listing.listingID,
-                              listing.saleType
-                            )
-                          }
-                        >
-                          Reveal Bid
-                        </Button>
-                      </td>
+                          <Button
+                            onClick={() =>
+                              this.revealBid(
+                                listing.listingID,
+                                listing.saleType
+                              )
+                            }
+                          >
+                            Reveal Bid
+                          </Button>
+                        </td>
                       )}
                     </tr>
                   ))}

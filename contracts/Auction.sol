@@ -32,28 +32,22 @@ contract AuctionParent {
 
     /// @notice Triggered to store the details of the created auction.
     /// @dev Must not store the item itself for privacy.
-    /// @param beneficiary The seller's address .
-    /// @param biddingEnd Time in epoch which marks the end of bidding time.
-    /// @param revealEnd Time in epoch which marks the end of revealing time.
-    /// @param item The item of auction.
+    /// @param beneficiary The seller's address.
+    /// @param state The state of auction.
     event AuctionCreated ( 
         address beneficiary,
-        string item 
+        State state 
     );
+    
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs.
-    /// @param _biddingTime Time in seconds for bidding time.
-    /// @param _revealTime Time in seconds for revealing time.
     /// @param _beneficiary Address for the sellers address
-    /// @param _item the item on auction.
-    constructor(
-        address payable _beneficiary,
-        string memory _item
-    ) internal {
+    constructor(address payable _beneficiary) internal {
         details.beneficiary = _beneficiary;
-        details.
-        emit AuctionCreated(
-            details.beneficiary,
+        details.state = State.BIDDING;
+        emit AuctionCreated (
+            _beneficiary,
+            State.BIDDING
         );
     }
 
@@ -66,21 +60,20 @@ contract AuctionParent {
         bytes32 blindedBid
     );
 
-    // /// TODO - Verify bid check
-    // /// @notice check function to see if bid was made by address or not
-    // /// @return boolean result
-    // function checkBid() public returns (bool) {
-    //     if(bids[msg.sender] )
-    //         return true;
-    //     return false;
-    // }
+    /// @notice check function to see if bid was made by address or not
+    /// @return boolean result
+    function checkBid(address payable buyer) public returns (bool) {
+        if (bids[buyer].blindedBid != 0) {
+            return true;
+        }  
+        return false;
+    }
 
     /// @notice Function called by the buyer to make a bid.
     /// @param _blindedBid Encrypted amount.
-    function bid(bytes32 _blindedBid, address payable _bidder)
-        public
-        onlyBefore(details.biddingEnd)
-    {
+    function bid(bytes32 _blindedBid, address payable _bidder) public {
+        require(details.state == State.BIDDING, "Bidding period is over");
+        require(!checkBid(_bidder), "You have already bidded");
         // Only single bid is allowed.
         bids[_bidder] = Bid({
             blindedBid: _blindedBid,
@@ -106,9 +99,9 @@ contract AuctionParent {
     /// @dev placeBid is different for different kinds of auction.
     /// @param value The value that is claimed by the buyer.
     function reveal(uint value, address payable beneficiary) public returns (bool) {
+        require(details.state == State.REVEAL, "Reveal period is over");
         if (bids[beneficiary].blindedBid != keccak256(abi.encodePacked(value))) {
             // Bid was not actually revealed.
-            // Do not refund deposit.
             emit RevealMade(
                 beneficiary,
                 value,
@@ -118,7 +111,7 @@ contract AuctionParent {
         }
 
         placeBid(beneficiary, value);
-        /// Make it impossible for the sender to re-claim
+        // Make it impossible for the sender to re-claim
         bids[beneficiary].blindedBid = bytes32(0);
         emit RevealMade(
             beneficiary,
@@ -130,8 +123,7 @@ contract AuctionParent {
 
     /// @notice Function to be overloaded by the children contract classes.
     /// @param value The value that is claimed by the buyer.
-    function placeBid(address payable bidder, uint value) internal
-    {
+    function placeBid(address payable bidder, uint value) internal {
         require(true, "Child class does not have the appropriate function");
     }
 
@@ -142,6 +134,12 @@ contract AuctionParent {
         address winner,
         uint finalPrice
     );
+    
+    /// @notice Triggered to stop the bidding phase.
+    function biddingEnd() public {
+        require(details.state == State.BIDDING, "Bidding phase is already over");
+        details.state = State.REVEAL;
+    }
 
     /// @notice Triggered to return the details of the auction winner.
     /// @return Address of the auction winner.
@@ -149,8 +147,8 @@ contract AuctionParent {
         public
         returns (address payable)
     {
-        require(!details.ended);
-        details.ended = true;
+        require(details.state == State.REVEAL, "Bidding phase is not over yet");
+        details.state = State.COMPLETE;
         endTrigger();
         if(requiredBid != 0) {
             emit AuctionEnded(requiredBidder, requiredBid);
@@ -168,12 +166,11 @@ contract AuctionParent {
     }
 
     /// @notice Fetches the details of the auction.
-    /// @return details structure of the cnotract.
+    /// @return details structure of the contract.
     function fetchDetails() public view returns (Details memory) {
         Details memory newDetails = Details(
             details.beneficiary,
-            details.ended,
-            details.item
+            details.state
         );
 
         return newDetails;
@@ -199,11 +196,9 @@ contract AuctionParent {
 contract FirstPrice is AuctionParent {
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _item the item on auction.
-    constructor(
-        string memory _item,
-        address payable _beneficiary
-    ) public AuctionParent(_beneficiary, _item) { }
+    /// @param _beneficiary the beneficiary on auction.
+    constructor(address payable _beneficiary) public AuctionParent(_beneficiary) { }
+    
     /// @notice Triggered to store the bid and the old value stored. 
     /// @param oldBidder The bidder that was before the current bid.
     /// @param oldValue The value before this bid.
@@ -253,11 +248,8 @@ contract SecondPrice is AuctionParent {
     uint public highestBid;
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _item the item on auction.
-    constructor(
-        string memory _item,
-        address payable _beneficiary
-    ) public AuctionParent(_beneficiary, _item) { }
+     /// @param _beneficiary the beneficiary on auction.
+    constructor(address payable _beneficiary) public AuctionParent(_beneficiary) { }
     
     /// @notice Triggered to store the bid and the old value stored. 
     /// @param oldBidder The bidder that was before the current bid.
@@ -316,11 +308,8 @@ contract AveragePrice is AuctionParent {
     
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs.
-    /// @param _item the item on auction.
-    constructor(
-        string memory _item,
-        address payable _beneficiary
-    ) public AuctionParent(_beneficiary, _item) { }
+    /// @param _beneficiary the beneficiary on auction.
+    constructor(address payable _beneficiary) public AuctionParent(_beneficiary) { }
     
     /// @notice Function that will store the bidder details.
     /// @dev Just stores the values since the average can only be calcualated
@@ -343,7 +332,8 @@ contract AveragePrice is AuctionParent {
         
         // The bid was valid which means that it must be considered 
         // for average and for final winner.
-        for (uint i = 0; i < bidderCount; i++) {
+        for (uint i = 0; i < bidderCount; i++) 
+        {
             total += bidValues[bidders[i]];
         }
         
@@ -376,3 +366,4 @@ contract AveragePrice is AuctionParent {
         return;
     }
 }
+
