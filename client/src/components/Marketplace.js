@@ -5,6 +5,7 @@ import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import EthCrypto from "eth-crypto";
+import Web3 from "web3";
 
 class Marketplace extends React.Component {
   saleState = {
@@ -76,7 +77,7 @@ class Marketplace extends React.Component {
       const { privateKey, publicKey } = EthCrypto.createIdentity();
       const { contracts, accounts } = this.props;
       const amount = prompt("Please enter your bid amount:")
-      const amountHash = web3.utils.soliditySha3(amount)
+      const amountHash = Web3.utils.soliditySha3(amount)
       await contracts[this.contractState[saleType]].methods
       .buyListing(itemID, amountHash, publicKey)
       .send({ from: accounts[0] });

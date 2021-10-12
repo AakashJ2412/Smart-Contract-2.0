@@ -81,9 +81,9 @@ class Dashboard extends React.Component {
 
   endBiddingListings = async(itemID, saleType) => {
     try {
-      const {contracts, accounts} = this.props;
+      const {contracts} = this.props;
       await contracts[this.contractState[saleType]].methods
-        .endBidding(itemID,accounts[0])
+        .endBidding(itemID)
       await this.getUserListings();
     } catch (ex) {
       console.log("Error while ending bidding period", ex);
@@ -92,12 +92,16 @@ class Dashboard extends React.Component {
 
   endRevealListings = async(itemID, saleType) => {
     try {
-      const {contracts, accounts} = this.props;
-      await contracts[this.contractState[saleType]].methods
-        .endReveal(itemID,accounts[0])
+      const {contracts} = this.props;
+      var res = await contracts[this.contractState[saleType]].methods
+        .endListing(itemID)
+        if(res === this.props.accounts[0])
+          alert(`Your item wasn't bid upon, and has not been sold`);
+        else
+          alert(`Your auction is completed. The winner for your auction is: ${res}`);
       await this.getUserListings();
     } catch (ex) {
-      console.log("Error while ending bidding period", ex);
+      console.log("Error while ending reveal period", ex);
     }
   };
 
