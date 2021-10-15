@@ -34,7 +34,7 @@ Due to the limit of the byte size, there is a separate marketplace for each of t
 
 The auctions run indefinitely and the seller has the control to change the phases.
 
-$$\text{add} \rightarrow \text{bid} \rightarrow \text{reveal} \rightarrow \text{end}$$
+add - bid - reveal - end
 
 ---
 
@@ -44,12 +44,11 @@ Smart contracts' key purpose is to make transactions secure and immutable on a p
 
 ### Hiding Bid amounts
 
-Since all the auctions are blind auctions, the bids should be not revealed to any party other than the bidder.  The bidder has to input $2$ different values, deposit and the bid.
+Since all the auctions are blind auctions, the bids should be not revealed to any party other than the bidder.  The bidder has to input 2 different values, deposit and the bid.
 
 - The deposit is the amount of ethereum transferred to the smart contract
 - Bid is the value that the bidder actually wants to bid, this value is hashed and sent.
-
-$$\text{valid bid} \rightarrow\text{deposit} \geq \text{bid}$$
+- For a valid bid: deposit >= bid
 
 During the reveal phase, the bidder has to reveal their bid by passing in the actual value. If the reveal value's hash matches with the original blinded bid then the bid is considered to be valid.
 
