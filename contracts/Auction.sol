@@ -164,12 +164,9 @@ contract FirstPrice is AuctionParent {
         // back to the correct bidder.
         uint refund = bids[highestBidder].deposit - highestValue;
         highestBidder.transfer(refund);
-        bids[highestBidder].blindedBid = bytes32(0);
         
         requiredBidder = highestBidder;
         requiredBid = highestValue;
-        
-        return;
     }
 }
 
@@ -208,12 +205,9 @@ contract SecondPrice is AuctionParent {
         // back to the correct bidder.
         uint refund = bids[highestBidder].deposit - secondHighest;
         highestBidder.transfer(refund);
-        bids[highestBidder].blindedBid = bytes32(0);
         
         requiredBidder = highestBidder;
         requiredBid = secondHighest;
-        
-        return;
     }
 }
 
@@ -229,55 +223,43 @@ contract AveragePrice is AuctionParent {
     /// So far no money has been returned in the revealing period of the 
     /// auction since to calculate the average values we need to have all the values.
     function endTrigger() internal {
-        if(bidderCount == 0) {
-            requiredBidder == details.beneficiary;
-            requiredBid = 0;
-            return;
-        }
         uint total = 0;
         
         for (uint i = 0; i < bidderCount; i++) {
-            address payable bidder = bidders[i];
-            total += bids[bidder].reveal;
+            total += bids[bidders[i]].reveal;
         }
         
-        // Now we have the list of the correct bidders and the total value
-        // We find the closest to average value bid and return the rest of it.
-        address payable closestBidder = bidders[0];
-        uint closestValue = bids[closestBidder].reveal;
+        int difference = int(bids[bidders[0]].reveal) * int(bidderCount) - int(total);
+        difference = difference >= 0 ? difference : -1 * difference;
+        uint closestValue = uint(difference);
+        uint winId = 0;
         for (uint i = 1; i < bidderCount; i++) {
-            address payable currentBidder = bidders[i];
-            uint currentValue = bids[currentBidder].reveal;
+            uint currentValue = bids[bidders[i]].reveal;
             
-            int difference1 = int(closestValue) * int(bidderCount) - int(total);
+            int difference1 = int(currentValue) * int(bidderCount) - int(total);
             difference1 = difference1 >= 0 ? difference1 : -1 * difference1;
             
-            int difference2 = int(currentValue) * int(bidderCount) - int(total);
-            difference2 = difference2 >= 0 ? difference2 : -1 * difference2;
-            
-            if (difference2 < difference1) {
-                // the new value is closer to the average
-                closestBidder.transfer(bids[closestBidder].deposit);
-                bids[closestBidder].blindedBid = bytes32(0);
-                
-                closestBidder = currentBidder;
+            if (difference1 < difference) {
                 closestValue = currentValue;
-            } else {
-                // If the new bid is not closed then return all the amount back
-                currentBidder.transfer(bids[currentBidder].deposit);
-                bids[currentBidder].blindedBid = bytes32(0);
+                difference = difference1;
+                winId = i;
             }
         }
+
+        for (uint i = 0; i < bidderCount; i++) {
+            if (i != winId) {
+                // The bidder lost, return the value
+                bidders[i].transfer(bids[bidders[i]].deposit);
+            }
+        }
+
         // All the values have been returned and the final bid has been kept
         // the correct amount has to be transferred to seller and the rest 
         // back to the correct bidder.
-        uint refund =  bids[closestBidder].deposit - closestValue;
-        closestBidder.transfer(refund);
-        bids[closestBidder].blindedBid = bytes32(0);
+        uint refund =  bids[bidders[winId]].deposit - bids[bidders[winId]].reveal;
+        bidders[winId].transfer(refund);
         
-        requiredBidder = closestBidder;
-        requiredBid = closestValue;
-        
-        return;
+        requiredBidder = bidders[winId];
+        requiredBid = bids[bidders[winId]].reveal;
     }
 }

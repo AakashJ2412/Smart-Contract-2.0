@@ -59,7 +59,7 @@ class Dashboard extends React.Component {
     const boughtList = [];
     const bidList = [];
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       let ret = await this.props.contracts[this.contractState[i]].methods
         .fetchSoldItems()
         .call({ from: this.props.accounts[0] });
