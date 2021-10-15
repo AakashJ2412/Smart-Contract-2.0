@@ -13,9 +13,9 @@ contract Marketplace {
 
     // @dev Stores the encrypted password
     struct Encrypted {
-      string iv;
+      bytes32 iv;
       string ephemPublicKey;
-      string ciphertext;
+      bytes32 ciphertext;
       string mac;
     }
 
@@ -121,7 +121,7 @@ contract Marketplace {
             price,
             msg.sender,
             address(0),
-            Encrypted("", "", "", ""),
+            Encrypted(bytes32(0), "", bytes32(0), ""),
             "",
             State.UNSOLD
         );
@@ -231,9 +231,9 @@ contract Marketplace {
     // @param mac Checksum to maintain integrity of the message
     function deliverListing(
       uint itemId,
-      string calldata iv,
+      bytes32 iv,
       string calldata ephemPublicKey,
-      string calldata ciphertext,
+      bytes32 ciphertext,
       string calldata mac
     ) external {
         require(msg.sender == listings[itemId].uniqueSellerID, "Only seller can deliver");

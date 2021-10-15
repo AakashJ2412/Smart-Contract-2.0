@@ -46,7 +46,9 @@ class Marketplace extends React.Component {
         ret.forEach((item) => {
           if (this.props.accounts[0] !== item.uniqueSellerID) {
             item.saleType = i;
-            item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            if (item.askingPrice) {
+              item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            }
             itemlist.push(item);
           }
         });
@@ -79,14 +81,30 @@ class Marketplace extends React.Component {
     try {
       const { privateKey, publicKey } = EthCrypto.createIdentity();
       const { contracts, accounts } = this.props;
-      const amount = prompt("Please enter your bid amount:");
-      if (amount <= 0) {
-        throw "Invalid amount entered";
-      }
+
+      // Get bid
+      const amount = Web3.utils.toWei(
+        prompt("Please enter your real bid amount:"),
+        "ether"
+      );
       const amountHash = Web3.utils.soliditySha3(amount);
+
+      // Get deposit ammount
+      const depAmount = Web3.utils.toWei(
+        prompt("Please enter your deposit amount:"),
+        "ether"
+      );
+
+      // Verify if bid is correct
+      if (parseFloat(depAmount) < parseFloat(amount)) {
+        alert("Deposit amount should be more than or equal to bid amount");
+        throw new Error("Invalid deposit");
+      }
+
+      // Make the bid
       await contracts[this.contractState[saleType]].methods
         .bidListing(itemID, publicKey, amountHash)
-        .send({ from: accounts[0], value: Web3.utils.toWei(amount, "ether") });
+        .send({ from: accounts[0], value: depAmount });
       await this.getListings();
 
       alert(

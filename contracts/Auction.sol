@@ -77,6 +77,7 @@ contract AuctionParent {
     /// If a more appropriate value is found then the value is again refunded.
     function reveal(uint value, address payable bidder) public returns (bool)
     {
+        require(bids[bidder].reveal == 0, "Bid already revealed");
         if (bids[bidder].blindedBid != keccak256(abi.encodePacked(value))){
             // Bid was not actually revealed.
             // Do not refund deposit.
@@ -154,7 +155,6 @@ contract FirstPrice is AuctionParent {
             if (i != highId) {
                 // The bidder lost, return the value
                 bidders[i].transfer(bids[bidders[i]].deposit);
-                continue;
             }
         }
         address payable highestBidder = bidders[highId];

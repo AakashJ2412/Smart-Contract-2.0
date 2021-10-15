@@ -66,7 +66,9 @@ class Dashboard extends React.Component {
       if (ret) {
         ret.forEach((item) => {
           item.saleType = i;
-          item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+          if (item.askingPrice) {
+            item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+          }
           soldList.push(item);
         });
       }
@@ -77,11 +79,15 @@ class Dashboard extends React.Component {
         ret.forEach((item) => {
           if (item.uniqueBuyerID !== this.props.accounts[0]) {
             item.saleType = i;
-            item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            if (item.askingPrice) {
+              item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            }
             bidList.push(item);
           } else {
             item.saleType = i;
-            item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            if (item.askingPrice) {
+              item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            }
             boughtList.push(item);
           }
         });
@@ -113,7 +119,11 @@ class Dashboard extends React.Component {
       const { contracts } = this.props;
       let res = await contracts[this.contractState[saleType]].methods
         .endRevealPhase(itemID)
+        .call({ from: this.props.accounts[0] });
+      await contracts[this.contractState[saleType]].methods
+        .endRevealPhase(itemID)
         .send({ from: this.props.accounts[0] });
+      console.log(res);
       if (res === this.props.accounts[0])
         alert(`Your item wasn't bid upon, and has not been sold`);
       else
@@ -129,10 +139,17 @@ class Dashboard extends React.Component {
   revealBid = async (itemID, saleType) => {
     try {
       const { contracts, accounts } = this.props;
-      const amount = prompt("Please enter your bid amount:");
+      const amount = Web3.utils.toWei(
+        prompt("Please enter your bid amount:"),
+        "ether"
+      );
       let res = await contracts[this.contractState[saleType]].methods
         .revealListing(itemID, amount)
+        .call({ from: accounts[0] });
+      await contracts[this.contractState[saleType]].methods
+        .revealListing(itemID, amount)
         .send({ from: accounts[0] });
+      console.log(res);
       if (res) {
         alert(`Your reveal was successfully accepted.`);
       } else {
@@ -150,14 +167,21 @@ class Dashboard extends React.Component {
 
       // Fetch and encrypt the password with buyers public key
       const pwd = prompt("Please enter the product's password:");
+
+      if (!buyerPubKey) {
+        buyerPubKey = await contracts[this.contractState[saleType]].methods
+          .getWinnerPubKey(itemID)
+          .call({ from: accounts[0] });
+      }
+
       const encrypted = await EthCrypto.encryptWithPublicKey(buyerPubKey, pwd);
 
       await contracts[this.contractState[saleType]].methods
         .deliverListing(
           itemID,
-          encrypted.iv,
+          Web3.utils.asciiToHex(encrypted.iv),
           encrypted.ephemPublicKey,
-          encrypted.ciphertext,
+          Web3.utils.asciiToHex(encrypted.ciphertext),
           encrypted.mac
         )
         .send({
@@ -175,7 +199,14 @@ class Dashboard extends React.Component {
 
       // Decrypt the item
       const privateKey = prompt("Please enter the provided private key:");
-      const pwd = await EthCrypto.decryptWithPrivateKey(privateKey, item);
+      item[0] = Web3.utils.hexToAscii(item[0]);
+      item[2] = Web3.utils.hexToAscii(item[2]);
+      const pwd = await EthCrypto.decryptWithPrivateKey(privateKey, {
+        iv: item[0],
+        ephemPublicKey: item[1],
+        ciphertext: item[2],
+        mac: item[3],
+      });
 
       await contracts[this.contractState[saleType]].methods
         .confirmListing(itemID)

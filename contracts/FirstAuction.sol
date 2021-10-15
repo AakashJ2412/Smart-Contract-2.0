@@ -39,12 +39,6 @@ contract FirstAuction {
     // @dev mapping for all the Listing
     mapping(uint256 => Listing) private listings;
 
-    // @notice Triggered when the bidding period of listing ends
-    // @param listingID Unique Id for the listing
-    event ListingBidEnd (
-        uint indexed listingID
-    );
-
     // @notice Triggered to store the details of a listing on transaction logs
     // @param listingID Unique Id for the listing
     // @param itemName Name of the item
@@ -226,7 +220,6 @@ contract FirstAuction {
     function bidListing(uint itemId, string calldata bidderPubKey, bytes32 blindBid)
         external payable
     {
-        require(listings[itemId].state == State.BIDDING, "Listing not in BIDDING state");
         require(listings[itemId].auction.fetchBidFromAddress(msg.sender).blindedBid == 0, "Already bidded");
 
         listings[itemId].auction.bid.value(msg.value)(blindBid, msg.sender, bidderPubKey);
@@ -247,7 +240,6 @@ contract FirstAuction {
     function revealListing(uint itemId, uint value)
         external returns(bool)
     {
-        require(listings[itemId].state == State.REVEAL, "Listing not in REVEAL state");
         require(listings[itemId].auction.fetchBidFromAddress(msg.sender).blindedBid != 0, "Not bidded");
 
         bool successful = listings[itemId].auction.reveal(value, msg.sender);
@@ -277,7 +269,6 @@ contract FirstAuction {
       string calldata mac
     ) external {
         require(msg.sender == listings[itemId].uniqueSellerID, "Only seller can deliver");
-        require(listings[itemId].state == State.SOLD, "Listing not in SOLD state");
         listings[itemId].item = Encrypted(
             iv,
             ephemPublicKey,
@@ -299,7 +290,6 @@ contract FirstAuction {
     // @param itemId The item the buyer wants to confirm
     function confirmListing(uint itemId) external {
         require(listings[itemId].uniqueBuyerID == msg.sender, "Only buyer can confirm");
-        require(listings[itemId].state == State.PENDING, "Listing not in PENDING state");
         listings[itemId].state = State.DELIVERED;
 
         emit ListingConfirmed(
@@ -318,8 +308,6 @@ contract FirstAuction {
 
         listings[itemId].state = State.REVEAL;
         itemBid += 1;
-
-        emit ListingBidEnd(itemId);
     }
 
     // @notice Function to end reveal phase
@@ -331,9 +319,6 @@ contract FirstAuction {
 
         listings[itemId].state = State.SOLD;
         listings[itemId].uniqueBuyerID = listings[itemId].auction.auctionEnd();
-        // if(listings[itemId].uniqueBuyerID == msg.sender) {
-        //     listings[itemId].state = State.DELIVERED;
-        // }
         emit ListingSold (
             itemId,
             listings[itemId].uniqueSellerID,
