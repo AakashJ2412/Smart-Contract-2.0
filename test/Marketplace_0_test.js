@@ -1,4 +1,5 @@
 const Marketplace = artifacts.require("Marketplace");
+const web3_utils = require("web3-utils");
 
 contract("Marketplace", (accounts) => {
   let marketplace;
@@ -161,9 +162,16 @@ contract("Marketplace", (accounts) => {
     });
 
     // Deliver listing
-    const tx = await marketplace.deliverListing(0, "a", "b", "c", "d", {
-      from: accounts[0],
-    });
+    const tx = await marketplace.deliverListing(
+      0,
+      web3_utils.asciiToHex("a"),
+      "b",
+      web3_utils.asciiToHex("c"),
+      "d",
+      {
+        from: accounts[0],
+      }
+    );
 
     // Check if the correct event is being emmited
     const { logs } = tx;
@@ -174,9 +182,7 @@ contract("Marketplace", (accounts) => {
     assert.equal(log.args.listingID, 0);
     assert.equal(log.args.uniqueSellerID, accounts[0]);
     assert.equal(log.args.uniqueBuyerID, accounts[1]);
-    assert.equal(log.args.item.iv, "a");
     assert.equal(log.args.item.ephemPublicKey, "b");
-    assert.equal(log.args.item.ciphertext, "c");
     assert.equal(log.args.item.mac, "d");
   });
 
@@ -195,9 +201,16 @@ contract("Marketplace", (accounts) => {
     });
 
     // Deliver listing
-    await marketplace.deliverListing(0, "a", "b", "c", "d", {
-      from: accounts[0],
-    });
+    await marketplace.deliverListing(
+      0,
+      web3_utils.asciiToHex("a"),
+      "b",
+      web3_utils.asciiToHex("c"),
+      "d",
+      {
+        from: accounts[0],
+      }
+    );
 
     // Confirm listing
     const tx = await marketplace.confirmListing(0, { from: accounts[1] });
