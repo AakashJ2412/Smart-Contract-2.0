@@ -182,30 +182,31 @@ contract SecondPrice is AuctionParent {
     ) public AuctionParent(beneficiary, _item) { }
     
     function endTrigger() internal {
-        if(bidderCount == 0) {
-            requiredBidder == details.beneficiary;
-            requiredBid = 0;
-            return;
-        }
-        address payable highestBidder = bidders[0];
-        uint highestValue = bids[highestBidder].reveal;
+        uint highestValue = bids[bidders[0]].reveal;
         uint secondHighest = highestValue;
-        for (uint i = 0; i < bidderCount; i++) {
-            address payable curBidder = bidders[i];
-            if (bids[curBidder].reveal <= highestValue) {
-                // The bidder lost, return the value
-                curBidder.transfer(bids[curBidder].deposit);
-                continue;
-            }
-            highestBidder = curBidder;
-            secondHighest = highestValue;
-            highestValue = bids[curBidder].reveal;
+        uint highId = 0;
+        for(uint i = 1; i < bidderCount; i++) {
+          if(bids[bidders[i]].reveal > highestValue) {
+            secondHighest = highestValue; 
+            highestValue = bids[bidders[i]].reveal;
+            highId = i;
+          } else if (bids[bidders[i]].reveal > secondHighest) {
+            secondHighest = bids[bidders[i]].reveal;
+          }
         }
+
+        for (uint i = 0; i < bidderCount; i++) {
+            if (i != highId) {
+                // The bidder lost, return the value
+                bidders[i].transfer(bids[bidders[i]].deposit);
+            }
+        }
+        address payable highestBidder = bidders[highId];
         
         // All the values have been returned and the final bid has been kept
         // the correct amount has to be transferred to seller and the rest 
         // back to the correct bidder.
-        uint refund =  bids[highestBidder].deposit - secondHighest;
+        uint refund = bids[highestBidder].deposit - secondHighest;
         highestBidder.transfer(refund);
         bids[highestBidder].blindedBid = bytes32(0);
         

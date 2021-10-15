@@ -38,7 +38,7 @@ class Marketplace extends React.Component {
 
   getListings = async () => {
     let itemlist = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 3; i++) {
       let ret = await this.props.contracts[this.contractState[i]].methods
         .fetchMarketItems()
         .call();

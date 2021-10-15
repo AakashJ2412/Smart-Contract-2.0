@@ -9,7 +9,7 @@ import Container from "react-bootstrap/Container";
 import getWeb3 from "./getWeb3";
 import MarketplaceABI from "./contracts/Marketplace.json";
 import FirstAuctionABI from "./contracts/FirstAuction.json";
-// import SecondAuctionABI from "./contracts/SecondAuction.json";
+import SecondAuctionABI from "./contracts/SecondAuction.json";
 // import AverageAuctionABI from "./contracts/AverageAuction.json";
 
 class App extends Component {
@@ -37,11 +37,11 @@ class App extends Component {
         firstauctionNetwork && firstauctionNetwork.address
       );
 
-      // const secondauctionNetwork = SecondAuctionABI.networks[networkId];
-      // const secondauctionInstance = new web3.eth.Contract(
-      //   SecondAuctionABI.abi,
-      //   secondauctionNetwork && secondauctionNetwork.address
-      // );
+      const secondauctionNetwork = SecondAuctionABI.networks[networkId];
+      const secondauctionInstance = new web3.eth.Contract(
+        SecondAuctionABI.abi,
+        secondauctionNetwork && secondauctionNetwork.address
+      );
 
       // const averageauctionNetwork = AverageAuctionABI.networks[networkId];
       // const averageauctionInstance = new web3.eth.Contract(
@@ -57,7 +57,7 @@ class App extends Component {
         contract: {
           marketplace: marketplaceInstance,
           firstAuction: firstauctionInstance,
-          // secondAuction: secondauctionInstance,
+          secondAuction: secondauctionInstance,
           // averageAuction: averageauctionInstance,
         },
       });
