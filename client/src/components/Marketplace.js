@@ -12,7 +12,7 @@ class Marketplace extends React.Component {
     0: "First bid winner",
     1: "First-price sealed-bid auction",
     2: "Second-price sealed-bid auction",
-    3: "Average price auction"
+    3: "Average price auction",
   };
 
   contractState = {
@@ -20,7 +20,7 @@ class Marketplace extends React.Component {
     1: "firstAuction",
     2: "secondAuction",
     3: "averageAuction",
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -37,14 +37,17 @@ class Marketplace extends React.Component {
   };
 
   getListings = async () => {
-    var itemlist = [];
-    for(var i=0;i<2;i++) {
-      var ret = await this.props.contracts[this.contractState[i]].methods.fetchMarketItems().call();
+    let itemlist = [];
+    for (let i = 0; i < 2; i++) {
+      let ret = await this.props.contracts[this.contractState[i]].methods
+        .fetchMarketItems()
+        .call();
       if (ret) {
         ret.forEach((item) => {
-          if (this.props.accounts[0] !== item.uniqueSellerID) { 
-            itemlist.push(item);
+          if (this.props.accounts[0] !== item.uniqueSellerID) {
             item.saleType = i;
+            item.askingPrice = Web3.utils.fromWei(item.askingPrice, "ether");
+            itemlist.push(item);
           }
         });
       }
@@ -64,7 +67,9 @@ class Marketplace extends React.Component {
         .send({ from: accounts[0], value: Web3.utils.toWei(price, "ether") });
       await this.getListings();
 
-      alert(`This is your private key. Store it securely to complete the transaction. ${privateKey}`);
+      alert(
+        `This is your private key. Store it securely to complete the transaction. ${privateKey}`
+      );
     } catch (ex) {
       console.log("Error while purchasing listing", ex);
     }
@@ -74,17 +79,19 @@ class Marketplace extends React.Component {
     try {
       const { privateKey, publicKey } = EthCrypto.createIdentity();
       const { contracts, accounts } = this.props;
-      const amount = prompt("Please enter your bid amount:")
-      if(amount <= 0) {
-        throw 'Invalid amount entered';
+      const amount = prompt("Please enter your bid amount:");
+      if (amount <= 0) {
+        throw "Invalid amount entered";
       }
-      const amountHash = Web3.utils.soliditySha3(amount)
+      const amountHash = Web3.utils.soliditySha3(amount);
       await contracts[this.contractState[saleType]].methods
-      .bidListing(itemID, publicKey, amountHash)
-      .send({ from: accounts[0], value: Web3.utils.toWei(amount, "ether") });
+        .bidListing(itemID, publicKey, amountHash)
+        .send({ from: accounts[0], value: Web3.utils.toWei(amount, "ether") });
       await this.getListings();
 
-      alert(`This is your private key. Store it securely to complete the transaction. ${privateKey}`);
+      alert(
+        `This is your private key. Store it securely to complete the transaction. ${privateKey}`
+      );
     } catch (ex) {
       console.log("Error while purchasing listing", ex);
     }
@@ -114,23 +121,34 @@ class Marketplace extends React.Component {
                       <td key={id + "a"}>{id + 1}</td>
                       <td key={id + "b"}>{listing.itemName}</td>
                       <td key={id + "c"}>{listing.itemDesc}</td>
-                      <td key={id + "d"}>{listing.saleType === 0 ? (listing.askingPrice) : ("n/a")}</td>
+                      <td key={id + "d"}>
+                        {listing.saleType === 0 ? listing.askingPrice : "n/a"}
+                      </td>
                       <td key={id + "e"}>{this.saleState[listing.saleType]}</td>
                       <td key={id + "f"}>
-                        { listing.saleType === 0 ? (
+                        {listing.saleType === 0 ? (
                           <Button
-                            onClick={() => this.buyMarketplaceListings(listing.listingID, listing.askingPrice)}
+                            onClick={() =>
+                              this.buyMarketplaceListings(
+                                listing.listingID,
+                                listing.askingPrice
+                              )
+                            }
                           >
                             Purchase
                           </Button>
                         ) : (
                           <Button
-                            onClick={() => this.makeAuctionBid(listing.listingID,listing.saleType)}
+                            onClick={() =>
+                              this.makeAuctionBid(
+                                listing.listingID,
+                                listing.saleType
+                              )
+                            }
                           >
                             Make Bid
                           </Button>
-                        )
-                        }
+                        )}
                       </td>
                     </tr>
                   ))}

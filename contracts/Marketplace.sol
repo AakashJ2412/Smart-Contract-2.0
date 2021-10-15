@@ -281,4 +281,3 @@ contract Marketplace {
         selfdestruct(owner);
     }
 }
-

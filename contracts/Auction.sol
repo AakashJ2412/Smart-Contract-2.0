@@ -141,11 +141,6 @@ contract FirstPrice is AuctionParent {
     ) public AuctionParent(beneficiary, _item) { }
     
     function endTrigger() internal {
-        if(bidderCount == 0) {
-            requiredBidder == details.beneficiary;
-            requiredBid = 0;
-            return;
-        }
         uint highestValue = bids[bidders[0]].reveal;
         uint highId = 0;
         for(uint i = 1; i < bidderCount; i++)

@@ -5,6 +5,7 @@ import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { useFormik } from "formik";
+import Web3 from "web3";
 
 function CreateListing({ contracts, accounts }) {
   const formik = useFormik({
@@ -25,7 +26,11 @@ function CreateListing({ contracts, accounts }) {
       const { askingPrice, itemName, itemDesc, saleType } = formik.values;
       if (saleType === "0") {
         await contracts.marketplace.methods
-          .createListing(itemName, itemDesc, askingPrice)
+          .createListing(
+            itemName,
+            itemDesc,
+            Web3.utils.toWei(askingPrice.toString(), "ether")
+          )
           .send({ from: accounts[0] });
       } else if (saleType === "1") {
         await contracts.firstAuction.methods
