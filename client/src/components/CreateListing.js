@@ -6,8 +6,12 @@ import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { useFormik } from "formik";
 import Web3 from "web3";
+import ReactLoading from 'react-loading';
 
+// Functional Component that creates a new Listing
 function CreateListing({ contracts, accounts }) {
+  
+  // Formik handles state retention of values
   const formik = useFormik({
     initialValues: {
       itemName: "",
@@ -17,6 +21,7 @@ function CreateListing({ contracts, accounts }) {
     },
   });
 
+  // Function invoked to create a listing
   async function createListing(event) {
     if (event) {
       event.preventDefault();
@@ -25,6 +30,7 @@ function CreateListing({ contracts, accounts }) {
     try {
       const { askingPrice, itemName, itemDesc, saleType } = formik.values;
       if (saleType === "0") {
+        // invoke createListing method in marketplace contract to generate listing with given details, and asking price converted to wei
         await contracts.marketplace.methods
           .createListing(
             itemName,
@@ -33,23 +39,28 @@ function CreateListing({ contracts, accounts }) {
           )
           .send({ from: accounts[0] });
       } else if (saleType === "1") {
+        // invoke createListing method in firstAuction contract
         await contracts.firstAuction.methods
           .createListing(itemName, itemDesc)
           .send({ from: accounts[0] });
       } else if (saleType === "2") {
+        // invoke createListing method in secondAuction contract
         await contracts.secondAuction.methods
           .createListing(itemName, itemDesc)
           .send({ from: accounts[0] });
       } else if (saleType === "3") {
+        // invoke createListing method in averageAuction contract
         await contracts.averageAuction.methods
           .createListing(itemName, itemDesc)
           .send({ from: accounts[0] });
       }
     } catch (ex) {
+      // Catch any errors for any of the above operations.
       console.log("Error while creating listing", ex);
     }
   }
-
+  
+  // return form to input values and send to createListing
   return (
     <Container>
       <Row className="mt-5 justify-content-center">

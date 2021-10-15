@@ -11,10 +11,14 @@ import MarketplaceABI from "./contracts/Marketplace.json";
 import FirstAuctionABI from "./contracts/FirstAuction.json";
 import SecondAuctionABI from "./contracts/SecondAuction.json";
 import AverageAuctionABI from "./contracts/AverageAuction.json";
+import ReactLoading from 'react-loading';
+import './css/App.css'
 
 class App extends Component {
+  // state that stores the web3 instance, connected accounts, and contract instances for the application
   state = { storageValue: 0, web3: null, accounts: null, contract: {} };
 
+  // componentDidMount loads web3 and the contracts
   componentDidMount = async () => {
     try {
       // Get network provider and web3 instance.
@@ -23,7 +27,7 @@ class App extends Component {
       // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
 
-      // Get the contract instance.
+      // Get the marketplace contract instance.
       const networkId = await web3.eth.net.getId();
       const marketplaceNetwork = MarketplaceABI.networks[networkId];
       const marketplaceInstance = new web3.eth.Contract(
@@ -31,18 +35,21 @@ class App extends Component {
         marketplaceNetwork && marketplaceNetwork.address
       );
 
+      // Get the first auction contract instance.
       const firstauctionNetwork = FirstAuctionABI.networks[networkId];
       const firstauctionInstance = new web3.eth.Contract(
         FirstAuctionABI.abi,
         firstauctionNetwork && firstauctionNetwork.address
       );
 
+      // Get the second auction contract instance
       const secondauctionNetwork = SecondAuctionABI.networks[networkId];
       const secondauctionInstance = new web3.eth.Contract(
         SecondAuctionABI.abi,
         secondauctionNetwork && secondauctionNetwork.address
       );
 
+      // Get the average auction contract instance
       const averageauctionNetwork = AverageAuctionABI.networks[networkId];
       const averageauctionInstance = new web3.eth.Contract(
         AverageAuctionABI.abi,
@@ -71,14 +78,15 @@ class App extends Component {
   };
 
   render() {
+    // Check if web3 has been loaded or not
     if (!this.state.web3) {
-      return <div>Loading Web3, accounts, and contract...</div>;
+      return <ReactLoading height={667} width={375} />;
     }
 
+    // Return router-dom and default page, and forward contracts and accounts as parameters to auction pages
     return (
-      <Router>
+      <Router className="bgcolor">
         <Navigation />
-        <Container>
           <Route path="/" exact component={Home} />
           <Route
             path="/dashboard"
@@ -110,7 +118,6 @@ class App extends Component {
               />
             )}
           />
-        </Container>
       </Router>
     );
   }
