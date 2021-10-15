@@ -229,10 +229,7 @@ contract FirstAuction {
         require(listings[itemId].state == State.BIDDING, "Listing not in BIDDING state");
         require(listings[itemId].auction.fetchBidFromAddress(msg.sender).blindedBid == 0, "Already bidded");
 
-        address tmp = address(listings[itemId].auction);
-        address payable auctionAddr = address(uint160(tmp));
-        auctionAddr.transfer(msg.value);
-        listings[itemId].auction.bid(blindBid, msg.sender, bidderPubKey);
+        listings[itemId].auction.bid.value(msg.value)(blindBid, msg.sender, bidderPubKey);
 
         emit ListingBid(
             listings[itemId].listingID,
@@ -361,4 +358,3 @@ contract FirstAuction {
         selfdestruct(owner);
     }
 }
-
