@@ -28,13 +28,13 @@ The inherited contracts overload `endTrigger` function that decides the auction 
 
 ## Adding New marketplaces
 
-Due to the limit of the byte size, there is a separate marketplace for each of the auctions. The front end fetches all the auctions and items from the $4$ marketplaces and accordingly the seller item is put into the correct marketplace.
+Due to the limit of the byte size, there is a separate marketplace for each of the auctions. The front end fetches all the auctions and items from the 4 marketplaces and accordingly the seller item is put into the correct marketplace.
 
 ### Auction Format
 
 The auctions run indefinitely and the seller has the control to change the phases.
 
-add - bid - reveal - end
+add → bid → reveal → end
 
 ---
 
@@ -66,8 +66,8 @@ Due to the new addition of the frontend, it opened up the possibility of doing t
 
 - When a buyer bids on an item, a public key pair is generated on the front end.
 - The user is prompted with the private key → They are supposed to note it down for later
-- The public key is appended to the blockchain, from where the seller is able to obtain the key of the winner(according to the logic). When the $\text{end}$ is the state, the seller must input the item string that was sold.
-- The front end uses the buyer's public key and encrypts the string and appends it back to the blockchain.
-- The buyer now has to pay the required amount and input the private key earlier stored to get the item.
+- The public key is appended to the blockchain, from where the seller is able to obtain the key of the winner(according to the logic). the seller must input the item string that is supposed to be sold.
+- The front end uses the winning bidder's public key and encrypts the string and appends it back to the blockchain.
+- The bidder now has to input their private key and retrieve the string.
 
 ---
