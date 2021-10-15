@@ -109,7 +109,7 @@ contract AuctionParent {
     function auctionEnd()
         public returns (address)
     {
-        require(!details.ended);
+        require(!details.ended, "Auction already ended");
         details.ended = true;
         endTrigger();
         details.beneficiary.transfer(requiredBid);
