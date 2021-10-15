@@ -331,7 +331,9 @@ contract FirstAuction {
 
         listings[itemId].state = State.SOLD;
         listings[itemId].uniqueBuyerID = listings[itemId].auction.auctionEnd();
-
+        if(listings[itemId].uniqueBuyerID == msg.sender) {
+            listings[itemId].state = State.DELIVERED;
+        }
         emit ListingSold (
             itemId,
             listings[itemId].uniqueSellerID,

@@ -141,18 +141,28 @@ contract FirstPrice is AuctionParent {
     ) public AuctionParent(beneficiary, _item) { }
     
     function endTrigger() internal {
-        address payable highestBidder = bidders[0];
-        uint highestValue = bids[highestBidder].reveal;
+        if(bidderCount == 0) {
+            requiredBidder == details.beneficiary;
+            requiredBid = 0;
+            return;
+        }
+        uint highestValue = bids[bidders[0]].reveal;
+        uint highId = 0;
+        for(uint i = 1; i < bidderCount; i++)
+        {
+            if(bids[bidders[i]].reveal > highestValue) {
+                highestValue = bids[bidders[i]].reveal;
+                highId = i;
+            }
+        }
         for (uint i = 0; i < bidderCount; i++) {
-            address payable curBidder = bidders[i];
-            if (bids[curBidder].reveal <= highestValue) {
+            if (i != highId) {
                 // The bidder lost, return the value
-                curBidder.transfer(bids[curBidder].deposit);
+                bidders[i].transfer(bids[bidders[i]].deposit);
                 continue;
             }
-            highestBidder = curBidder;
-            highestValue = bids[curBidder].reveal;
         }
+        address payable highestBidder = bidders[highId];
         
         // All the values have been returned and the final bid has been kept
         // the correct amount has to be transferred to seller and the rest 
@@ -177,6 +187,11 @@ contract SecondPrice is AuctionParent {
     ) public AuctionParent(beneficiary, _item) { }
     
     function endTrigger() internal {
+        if(bidderCount == 0) {
+            requiredBidder == details.beneficiary;
+            requiredBid = 0;
+            return;
+        }
         address payable highestBidder = bidders[0];
         uint highestValue = bids[highestBidder].reveal;
         uint secondHighest = highestValue;
@@ -218,6 +233,11 @@ contract AveragePrice is AuctionParent {
     /// So far no money has been returned in the revealing period of the 
     /// auction since to calculate the average values we need to have all the values.
     function endTrigger() internal {
+        if(bidderCount == 0) {
+            requiredBidder == details.beneficiary;
+            requiredBid = 0;
+            return;
+        }
         uint total = 0;
         
         for (uint i = 0; i < bidderCount; i++) {

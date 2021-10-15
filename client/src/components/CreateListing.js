@@ -25,7 +25,7 @@ function CreateListing({ contracts, accounts }) {
       const { askingPrice, itemName, itemDesc, saleType } = formik.values;
       if (saleType === "0") {
         await contracts.marketplace.methods
-          .createListing(askingPrice, itemName, itemDesc)
+          .createListing(itemName, itemDesc, askingPrice)
           .send({ from: accounts[0] });
       } else if (saleType === "1") {
         await contracts.firstAuction.methods

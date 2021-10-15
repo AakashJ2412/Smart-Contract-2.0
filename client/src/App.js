@@ -9,8 +9,8 @@ import Container from "react-bootstrap/Container";
 import getWeb3 from "./getWeb3";
 import MarketplaceABI from "./contracts/Marketplace.json";
 import FirstAuctionABI from "./contracts/FirstAuction.json";
-import SecondAuctionABI from "./contracts/SecondAuction.json";
-import AverageAuctionABI from "./contracts/AverageAuction.json";
+// import SecondAuctionABI from "./contracts/SecondAuction.json";
+// import AverageAuctionABI from "./contracts/AverageAuction.json";
 
 class App extends Component {
   state = { storageValue: 0, web3: null, accounts: null, contract: {} };
@@ -37,17 +37,17 @@ class App extends Component {
         firstauctionNetwork && firstauctionNetwork.address
       );
 
-      const secondauctionNetwork = SecondAuctionABI.networks[networkId];
-      const secondauctionInstance = new web3.eth.Contract(
-        SecondAuctionABI.abi,
-        secondauctionNetwork && secondauctionNetwork.address
-      );
+      // const secondauctionNetwork = SecondAuctionABI.networks[networkId];
+      // const secondauctionInstance = new web3.eth.Contract(
+      //   SecondAuctionABI.abi,
+      //   secondauctionNetwork && secondauctionNetwork.address
+      // );
 
-      const averageauctionNetwork = AverageAuctionABI.networks[networkId];
-      const averageauctionInstance = new web3.eth.Contract(
-        AverageAuctionABI.abi,
-        averageauctionNetwork && averageauctionNetwork.address
-      );
+      // const averageauctionNetwork = AverageAuctionABI.networks[networkId];
+      // const averageauctionInstance = new web3.eth.Contract(
+      //   AverageAuctionABI.abi,
+      //   averageauctionNetwork && averageauctionNetwork.address
+      // );
 
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
@@ -57,8 +57,8 @@ class App extends Component {
         contract: {
           marketplace: marketplaceInstance,
           firstAuction: firstauctionInstance,
-          secondAuction: secondauctionInstance,
-          averageAuction: averageauctionInstance,
+          // secondAuction: secondauctionInstance,
+          // averageAuction: averageauctionInstance,
         },
       });
     } catch (error) {

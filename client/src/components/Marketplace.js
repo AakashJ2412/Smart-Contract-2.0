@@ -38,8 +38,7 @@ class Marketplace extends React.Component {
 
   getListings = async () => {
     var itemlist = [];
-
-    for(var i=0;i<4;i++) {
+    for(var i=0;i<2;i++) {
       var ret = await this.props.contracts[this.contractState[i]].methods.fetchMarketItems().call();
       if (ret) {
         ret.forEach((item) => {
@@ -56,16 +55,15 @@ class Marketplace extends React.Component {
     });
   };
 
-  buyMarketplaceListings = async (itemID) => {
+  buyMarketplaceListings = async (itemID, price) => {
     try {
       const { privateKey, publicKey } = EthCrypto.createIdentity();
       const { contracts, accounts } = this.props;
       await contracts.marketplace.methods
         .buyListing(itemID, publicKey)
-        .send({ from: accounts[0] });
+        .send({ from: accounts[0], value: Web3.utils.toWei(price, "ether") });
       await this.getListings();
 
-      // TODO: Change to modal
       alert(`This is your private key. Store it securely to complete the transaction. ${privateKey}`);
     } catch (ex) {
       console.log("Error while purchasing listing", ex);
@@ -77,13 +75,15 @@ class Marketplace extends React.Component {
       const { privateKey, publicKey } = EthCrypto.createIdentity();
       const { contracts, accounts } = this.props;
       const amount = prompt("Please enter your bid amount:")
+      if(amount <= 0) {
+        throw 'Invalid amount entered';
+      }
       const amountHash = Web3.utils.soliditySha3(amount)
       await contracts[this.contractState[saleType]].methods
-      .buyListing(itemID, amountHash, publicKey)
-      .send({ from: accounts[0] });
+      .bidListing(itemID, publicKey, amountHash)
+      .send({ from: accounts[0], value: Web3.utils.toWei(amount, "ether") });
       await this.getListings();
 
-      // TODO: Change to modal
       alert(`This is your private key. Store it securely to complete the transaction. ${privateKey}`);
     } catch (ex) {
       console.log("Error while purchasing listing", ex);
@@ -119,7 +119,7 @@ class Marketplace extends React.Component {
                       <td key={id + "f"}>
                         { listing.saleType === 0 ? (
                           <Button
-                            onClick={() => this.buyMarketplaceListings(listing.listingID)}
+                            onClick={() => this.buyMarketplaceListings(listing.listingID, listing.askingPrice)}
                           >
                             Purchase
                           </Button>
