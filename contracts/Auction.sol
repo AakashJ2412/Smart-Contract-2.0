@@ -2,16 +2,20 @@
           
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
+
+/// @title Extension for Marketplace to add Auctions
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Do not deploy
+/// @dev Parent class for the other contracts.
 contract AuctionParent {
+    /// @dev structure to contain all the information about bids made.
     struct Bid {
-        // the hash
         bytes32 blindedBid;
         uint deposit;
         uint reveal;
         string bidderPublicKey;
     }
-
-    // seller input stuff
+    /// @dev structure to store all the details about the product 
     struct Details {
         address payable beneficiary;
         bool ended;
@@ -23,13 +27,23 @@ contract AuctionParent {
     uint bidderCount = 0;
     mapping(address => Bid) public bids;
 
+    /// @dev Finaly bidder and the bid that won the auction. 
     address payable public requiredBidder;
     uint public requiredBid;
     
+    /// @notice Triggered to store the details of the created auction.
+    /// @dev Must not store the item itself for privacy.
+    /// @param beneficiary The seller's address .
+    /// @param item The item of auction.
     event AuctionCreated ( 
         address beneficiary,
         string item 
     );
+
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs.
+    /// @param _beneficiary Address for the sellers address.
+    /// @param _item the item on auction.
     constructor(
         address payable _beneficiary,
         string memory _item
@@ -42,12 +56,20 @@ contract AuctionParent {
         );
     }
 
+    /// @notice Triggered to store the bidder details and hash.
+    /// @dev Hash was the default etheruem hash.
+    /// @param bidder address of the bidder.
+    /// @param blindedBid Encrypted amount.
+    /// @param deposit the amount transferred.
     event BidMade (
         address bidder,
         bytes32 blindedBid,
         uint deposit
     );
-    /// Send the bit _blindedBid is the hash of the amount
+    /// @notice Function called by the buyer to make a bid.
+    /// @param _blindedBid Encrypted amount.
+    /// @param bidder
+    /// @param publicKey public key for the bidder.
     function bid(bytes32 _blindedBid, address bidder, string memory publicKey)
         public
         payable
@@ -65,16 +87,20 @@ contract AuctionParent {
         );
     }
 
+    /// @notice Triggered to store the bidders reveal state. 
+    /// @param bidder address of the bidder.
+    /// @param bidValue the value claimed by the bidder.
+    /// @param isCorrect Indicating the correctness of the claim. 
     event RevealMade(
         address bidder,
         uint bidValue,
         bool isCorrect
     );
-    /// Reveal your blinded bids. 
-    /// If incorrect the value entered is incorrect no refunded
-    /// If the transferred amount is less than the claimed value 
-    /// it is returned
-    /// If a more appropriate value is found then the value is again refunded.
+
+    /// @notice Called by buyer to reveal the bids he had made.
+    /// @dev placeBid is different for different kinds of auction.
+    /// @param value The value that is claimed by the buyer.
+    /// @param bidder Bidder passing the value
     function reveal(uint value, address payable bidder) public returns (bool)
     {
         require(bids[bidder].reveal == 0, "Bid already revealed");
@@ -102,11 +128,18 @@ contract AuctionParent {
         );
         return true;
     }
-    /// End the auction and send the highest bid to the beneficiary.
+
+    /// @notice Triggered to store the details of the auction winner.
+    /// @param winner Address of the auction winner.
+    /// @param finalPrice Price the auction winner has to pay.
     event AuctionEnded(
         address winner,
         uint finalPrice
     );
+
+    /// @notice Triggered to return the details of the auction winner.
+    /// @dev Returns back all the deposit.
+    /// @return Address of the auction winner.
     function auctionEnd()
         public returns (address)
     {
@@ -118,29 +151,49 @@ contract AuctionParent {
         return requiredBidder;
     }
     
+    /// @notice Function to trigger before ending the auction.
+    /// @dev No triggers.
     function endTrigger() internal {
         require(true, "Child class does not have the appropriate function");
         return;
     }
 
+    /// @notice Fetches the details of the auction.
+    /// @return details structure of the cnotract.
     function fetchDetails() public view returns (Details memory) {
         return details;
     }
+
+    /// @notice Fetches the bid status of the caller.
+    /// @return Details of the bid done.
     function fetchBid() public view returns (Bid memory returnBid) {
         return bids[msg.sender];
     }
+
+    /// @notice Fetches the bid status of the given address.
+    /// @return Details of the bid.
     function fetchBidFromAddress(address bidder) public view returns (Bid memory returnBid) {
         return bids[bidder];
     }
 }
 
+/// @title Auction where the highest bidder has to pay the amount they bid.
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Called from marketplace.
 contract FirstPrice is AuctionParent {
-    /// The highest bid is the winner
+
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs and calls the parent constructor.
+    /// @param _beneficiary the account to which the amount will be transferred.
+    /// @param _item the item on auction.
     constructor(
         address payable beneficiary,
         string memory _item
     ) public AuctionParent(beneficiary, _item) { }
     
+    /// @notice Triggered at the end to calculate the average and set the 
+    ///         requiredBidder.
+    /// @dev Sends back all the amount.
     function endTrigger() internal {
         uint highestValue = bids[bidders[0]].reveal;
         uint highId = 0;
@@ -170,14 +223,24 @@ contract FirstPrice is AuctionParent {
     }
 }
 
+/// @title Auction where the highest bidder has to pay the second highest bid.
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed.
+/// @notice Called from marketplace.
 contract SecondPrice is AuctionParent {
-    /// The highest bid is the winner but the price is second highest
+    /// @dev The highest bid is the winner but the price is second highest
     uint public highestBid;
+
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs and calls the parent constructor.
+    /// @param _beneficiary the account to which the amount will be transferred.
+    /// @param _item the item on auction.
     constructor(
         address payable beneficiary,
         string memory _item
     ) public AuctionParent(beneficiary, _item) { }
     
+    /// @notice Triggered at the end to calculate the highest and second highest bid.
+    /// @dev Sends back all the amount.
     function endTrigger() internal {
         uint highestValue = bids[bidders[0]].reveal;
         uint secondHighest = highestValue;
@@ -211,17 +274,25 @@ contract SecondPrice is AuctionParent {
     }
 }
 
+/// @title Auction where the highest bidder has to pay the amount they bid.
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice Called from marketplace.
 contract AveragePrice is AuctionParent {
-    // The bid closest to the average bid is the winner.
+    ///@dev The bid closest to the average bid is the winner.
     mapping (uint => address payable) public validBidders;
     
+    /// @notice Constructor for the auction. 
+    /// @dev Triggers event for logs and calls the parent constructor.
+    /// @param _beneficiary the account to which the amount will be transferred.
+    /// @param _item the item on auction.
     constructor(
         address payable beneficiary,
         string memory _item
     ) public AuctionParent(beneficiary, _item) { }
     
-    /// So far no money has been returned in the revealing period of the 
-    /// auction since to calculate the average values we need to have all the values.
+    /// @notice Triggered at the end to calculate the average and set the 
+    ///         requiredBidder.
+    /// @dev Sends back all the amount.
     function endTrigger() internal {
         uint total = 0;
         
