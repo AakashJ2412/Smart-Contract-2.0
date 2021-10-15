@@ -1,350 +1,237 @@
-// SPDX-License-Identifier: MIT
+// pragma solidity >0.4.23 <0.7.0;
+          
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
-
-/// @title Extension for Marketplace to add Auctions
-/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
-/// @notice Do not deploy
-/// @dev Parent class for the other contracts.
 contract AuctionParent {
-    /// @dev Possible states that an Auction can take.
-    enum State { BIDDING, REVEAL, COMPLETE }
-    
-    /// @dev structure to contain all the information about bids made.
     struct Bid {
+        // the hash
         bytes32 blindedBid;
-        uint value;
+        uint deposit;
+        uint reveal;
+        string bidderPublicKey;
     }
 
-    /// @dev structure to store all the details about the product 
-    /// which is being auctioned.
+    // seller input stuff
     struct Details {
         address payable beneficiary;
-        State state;
+        bool ended;
+        string item;
     }
     Details public details;
 
+    mapping(uint => address payable) public bidders;
+    uint bidderCount = 0;
     mapping(address => Bid) public bids;
 
-    /// @dev Finaly bidder and the bid that won the auction. 
     address payable public requiredBidder;
     uint public requiredBid;
-
-    /// @notice Triggered to store the details of the created auction.
-    /// @dev Must not store the item itself for privacy.
-    /// @param beneficiary The seller's address.
-    /// @param state The state of auction.
+    
     event AuctionCreated ( 
         address beneficiary,
-        State state 
+        string item 
     );
-    
-    /// @notice Constructor for the auction. 
-    /// @dev Triggers event for logs.
-    /// @param _beneficiary Address for the sellers address
-    constructor(address payable _beneficiary) internal {
+    constructor(
+        address payable _beneficiary,
+        string memory _item
+    ) internal {
         details.beneficiary = _beneficiary;
-        details.state = State.BIDDING;
-        emit AuctionCreated (
-            _beneficiary,
-            State.BIDDING
+        details.item = _item;
+        emit AuctionCreated(
+            details.beneficiary,
+            details.item 
         );
     }
 
-    /// @notice Triggered to store the bidder details and hash.
-    /// @dev Hash was the default etheruem hash.
-    /// @param bidder address of the bidder.
-    /// @param blindedBid Encrypted amount.
     event BidMade (
         address bidder,
-        bytes32 blindedBid
+        bytes32 blindedBid,
+        uint deposit
     );
-
-    /// @notice check function to see if bid was made by address or not
-    /// @return boolean result
-    function checkBid(address buyer) public view returns (bool) {
-        if (bids[buyer].blindedBid != 0) {
-            return true;
-        }  
-        return false;
-    }
-
-    /// @notice Function called by the buyer to make a bid.
-    /// @param _blindedBid Encrypted amount.
-    function bid(bytes32 _blindedBid, address payable _bidder) public {
-        require(details.state == State.BIDDING, "Bidding period is over");
-        require(!checkBid(_bidder), "You have already bidded");
-        // Only single bid is allowed.
-        bids[_bidder] = Bid({
+    /// Send the bit _blindedBid is the hash of the amount
+    function bid(bytes32 _blindedBid, address bidder, string memory publicKey)
+        public
+        payable
+    {
+        bids[bidder] = Bid({
             blindedBid: _blindedBid,
-            value: 0
-        }); 
+            deposit: msg.value,
+            reveal: 0,
+            bidderPublicKey: publicKey
+        }); // Only single bid is allowed.
         emit BidMade(
-            _bidder,
-            _blindedBid
+            bidder,
+            _blindedBid,
+            msg.value
         );
     }
 
-    /// @notice Triggered to store the bidders reveal state. 
-    /// @param bidder address of the bidder.
-    /// @param bidValue the value claimed by the bidder.
-    /// @param isCorrect Indicating the correctness of the claim. 
     event RevealMade(
         address bidder,
         uint bidValue,
         bool isCorrect
     );
-
-    /// @notice Called by buyer to reveal the bids he had made.
-    /// @dev placeBid is different for different kinds of auction.
-    /// @param value The value that is claimed by the buyer.
-    function reveal(uint value, address payable beneficiary) public returns (bool) {
-        require(details.state == State.REVEAL, "Reveal period is over");
-        if (bids[beneficiary].blindedBid != keccak256(abi.encodePacked(value))) {
+    /// Reveal your blinded bids. 
+    /// If incorrect the value entered is incorrect no refunded
+    /// If the transferred amount is less than the claimed value 
+    /// it is returned
+    /// If a more appropriate value is found then the value is again refunded.
+    function reveal(uint value, address payable bidder) public returns (bool)
+    {
+        if (bids[bidder].blindedBid != keccak256(abi.encodePacked(value))){
             // Bid was not actually revealed.
+            // Do not refund deposit.
             emit RevealMade(
-                beneficiary,
+                bidder,
                 value,
                 false
             );
             return false;
         }
+        bids[bidder].reveal = value;
+        if(bids[bidder].deposit >= value) {
+            // Keeping track of valid bidders
+            bidders[bidderCount] = bidder;
+            bidderCount += 1;
+        }
 
-        placeBid(beneficiary, value);
-        // Make it impossible for the sender to re-claim
-        bids[beneficiary].blindedBid = bytes32(0);
         emit RevealMade(
-            beneficiary,
+            bidder,
             value,
             true
         );
         return true;
     }
-
-    /// @notice Function to be overloaded by the children contract classes.
-    /// @param value The value that is claimed by the buyer.
-    function placeBid(address payable bidder, uint value) internal {
-        require(true, "Child class does not have the appropriate function");
-    }
-
-    /// @notice Triggered to store the details of the auction winner.
-    /// @param winner Address of the auction winner.
-    /// @param finalPrice Price the auction winner has to pay.
+    /// End the auction and send the highest bid to the beneficiary.
     event AuctionEnded(
         address winner,
         uint finalPrice
     );
-    
-    /// @notice Triggered to stop the bidding phase.
-    function biddingEnd() public {
-        require(details.state == State.BIDDING, "Bidding phase is already over");
-        details.state = State.REVEAL;
-    }
-
-    /// @notice Triggered to return the details of the auction winner.
-    /// @return Address of the auction winner.
     function auctionEnd()
-        public
-        returns (address payable)
+        public returns (address)
     {
-        require(details.state == State.REVEAL, "Bidding phase is not over yet");
-        details.state = State.COMPLETE;
+        require(!details.ended);
+        details.ended = true;
         endTrigger();
-        if(requiredBid != 0) {
-            emit AuctionEnded(requiredBidder, requiredBid);
-            return requiredBidder;
-        }
-        emit AuctionEnded(address(0), 0);
-        return details.beneficiary;
+        details.beneficiary.transfer(requiredBid);
+        emit AuctionEnded(requiredBidder, requiredBid);
+        return requiredBidder;
     }
     
-    /// @notice Function to trigger before ending the auction.
-    /// @dev Overloaded by the children contracts.
     function endTrigger() internal {
         require(true, "Child class does not have the appropriate function");
         return;
     }
 
-    /// @notice Fetches the details of the auction.
-    /// @return details structure of the contract.
     function fetchDetails() public view returns (Details memory) {
-        Details memory newDetails = Details(
-            details.beneficiary,
-            details.state
-        );
-
-        return newDetails;
+        return details;
     }
-
-    /// @notice Fetches the bid status of the given address.
-    /// @return Details of the bid.
-    function fetchBidFromAddress(address bidder) 
-            public view returns (Bid memory returnBid) 
-    {
+    function fetchBid() public view returns (Bid memory returnBid) {
+        return bids[msg.sender];
+    }
+    function fetchBidFromAddress(address bidder) public view returns (Bid memory returnBid) {
         return bids[bidder];
     }
-    function fetchBidValueFromAddress(address bidder) 
-            public view returns (uint) 
-    {
-        return bids[bidder].value;
-    }
 }
 
-/// @title Auction where the highest bidder has to pay the amount they bid.
-/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
-/// @notice Called from marketplace.
 contract FirstPrice is AuctionParent {
-    /// @notice Constructor for the auction. 
-    /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _beneficiary the beneficiary on auction.
-    constructor(address payable _beneficiary) public AuctionParent(_beneficiary) { }
+    /// The highest bid is the winner
+    constructor(
+        address payable beneficiary,
+        string memory _item
+    ) public AuctionParent(beneficiary, _item) { }
     
-    /// @notice Triggered to store the bid and the old value stored. 
-    /// @param oldBidder The bidder that was before the current bid.
-    /// @param oldValue The value before this bid.
-    /// @param doesReplace Indicator if the bid replaced the required bid.
-    event PlaceBidFirst(
-        address oldBidder,
-        uint oldValue,
-        bool doesReplace
-    );
-
-    /// @notice Function that will update required bidder.
-    /// @dev Required bidder details are overwritten if the current bid is 
-    ///      higher.
-    /// @param bidder Address of the bidder.
-    /// @param value The bid amount.
-    function placeBid(address payable bidder, uint value) internal 
-    {
-        if (value <= requiredBid) {
-            emit PlaceBidFirst(
-                requiredBidder,
-                requiredBid,
-                false
-            );
-            return;
-        }
-        emit PlaceBidFirst(
-            requiredBidder,
-            requiredBid,
-            true
-        );
-        requiredBid = value;
-        requiredBidder = bidder;
-    }
-    
-    /// @notice Function to trigger before ending the auction.
-    /// @dev No triggers.
     function endTrigger() internal {
+        address payable highestBidder = bidders[0];
+        uint highestValue = bids[highestBidder].reveal;
+        for (uint i = 0; i < bidderCount; i++) {
+            address payable curBidder = bidders[i];
+            if (bids[curBidder].reveal <= highestValue) {
+                // The bidder lost, return the value
+                curBidder.transfer(bids[curBidder].deposit);
+                continue;
+            }
+            highestBidder = curBidder;
+            highestValue = bids[curBidder].reveal;
+        }
+        
+        // All the values have been returned and the final bid has been kept
+        // the correct amount has to be transferred to seller and the rest 
+        // back to the correct bidder.
+        uint refund = bids[highestBidder].deposit - highestValue;
+        highestBidder.transfer(refund);
+        bids[highestBidder].blindedBid = bytes32(0);
+        
+        requiredBidder = highestBidder;
+        requiredBid = highestValue;
+        
         return;
     }
 }
 
-/// @title Auction where the highest bidder has to pay the second highest amount.
-/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
-/// @notice Called from marketplace.
 contract SecondPrice is AuctionParent {
-    /// @dev structure to contain all the information about bids made.
+    /// The highest bid is the winner but the price is second highest
     uint public highestBid;
-    /// @notice Constructor for the auction. 
-    /// @dev Triggers event for logs and calls the parent constructor.
-     /// @param _beneficiary the beneficiary on auction.
-    constructor(address payable _beneficiary) public AuctionParent(_beneficiary) { }
+    constructor(
+        address payable beneficiary,
+        string memory _item
+    ) public AuctionParent(beneficiary, _item) { }
     
-    /// @notice Triggered to store the bid and the old value stored. 
-    /// @param oldBidder The bidder that was before the current bid.
-    /// @param oldValue The value before this bid.
-    /// @param doesReplace Indicator if the bid replaced the required bid.
-    event PlaceBidSecond(
-        address oldBidder,
-        uint oldValue,
-        bool doesReplace
-    );
-
-    /// @notice Function that will update required bidder.
-    /// @dev Required bidder details are overwritten if the current bid is 
-    ///      higher. But the value required to be paid is second highest.
-    /// @param bidder Address of the bidder.
-    /// @param value The bid amount.
-    function placeBid(address payable bidder, uint value) internal 
-    {
-        if (value <= highestBid) {
-            emit PlaceBidSecond(
-                requiredBidder,
-                requiredBid,
-                false
-            );
-            return;
-        }
-        if (requiredBidder == address(0)) {
-            // To ensure that the first bidder does not have to pay 0
-            highestBid = value;
-        }
-        emit PlaceBidSecond(
-            requiredBidder,
-            requiredBid,
-            true 
-        );
-        requiredBid = highestBid; // the new 2nd highest bid
-        highestBid = value;
-        requiredBidder = bidder;
-    }
-    
-    /// @notice Function to trigger before ending the auction.
-    /// @dev No triggers.
     function endTrigger() internal {
+        address payable highestBidder = bidders[0];
+        uint highestValue = bids[highestBidder].reveal;
+        uint secondHighest = highestValue;
+        for (uint i = 0; i < bidderCount; i++) {
+            address payable curBidder = bidders[i];
+            if (bids[curBidder].reveal <= highestValue) {
+                // The bidder lost, return the value
+                curBidder.transfer(bids[curBidder].deposit);
+                continue;
+            }
+            highestBidder = curBidder;
+            secondHighest = highestValue;
+            highestValue = bids[curBidder].reveal;
+        }
+        
+        // All the values have been returned and the final bid has been kept
+        // the correct amount has to be transferred to seller and the rest 
+        // back to the correct bidder.
+        uint refund =  bids[highestBidder].deposit - secondHighest;
+        highestBidder.transfer(refund);
+        bids[highestBidder].blindedBid = bytes32(0);
+        
+        requiredBidder = highestBidder;
+        requiredBid = secondHighest;
+        
         return;
     }
 }
 
-/// @title Auction where the bidder closest to the average value wins.
-/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
-/// @notice Called from marketplace.
 contract AveragePrice is AuctionParent {
-    /// @dev map to bid values
-    mapping(address => uint) public bidValues;
-    mapping(uint => address payable) public bidders;
-    uint bidderCount = 0;
+    // The bid closest to the average bid is the winner.
+    mapping (uint => address payable) public validBidders;
     
-    /// @notice Constructor for the auction. 
-    /// @dev Triggers event for logs.
-    /// @param _beneficiary the beneficiary on auction.
-    constructor(address payable _beneficiary) public AuctionParent(_beneficiary) { }
+    constructor(
+        address payable beneficiary,
+        string memory _item
+    ) public AuctionParent(beneficiary, _item) { }
     
-    /// @notice Function that will store the bidder details.
-    /// @dev Just stores the values since the average can only be calcualated
-    ///      at the end.
-    /// @param bidder Address of the bidder.
-    /// @param value The bid amount.
-    function placeBid(address payable bidder, uint value) internal 
-    {
-        bidders[bidderCount] = bidder;
-        bidderCount += 1;
-        bidValues[bidder] = value;
-    }
-    
-    /// @notice Triggered at the end to calculate the average and set the 
-    ///         requiredBidder.
-    /// @dev Just stores the values since the average can only be calcualated
-    ///      at the end.
+    /// So far no money has been returned in the revealing period of the 
+    /// auction since to calculate the average values we need to have all the values.
     function endTrigger() internal {
         uint total = 0;
         
-        // The bid was valid which means that it must be considered 
-        // for average and for final winner.
-        for (uint i = 0; i < bidderCount; i++) 
-        {
-            total += bidValues[bidders[i]];
+        for (uint i = 0; i < bidderCount; i++) {
+            address payable bidder = bidders[i];
+            total += bids[bidder].reveal;
         }
         
-        // Now we have the list of the bidders and the total value
+        // Now we have the list of the correct bidders and the total value
         // We find the closest to average value bid and return the rest of it.
         address payable closestBidder = bidders[0];
-        uint closestValue = bidValues[closestBidder];
-
+        uint closestValue = bids[closestBidder].reveal;
         for (uint i = 1; i < bidderCount; i++) {
             address payable currentBidder = bidders[i];
-            uint currentValue = bidValues[currentBidder];
+            uint currentValue = bids[currentBidder].reveal;
             
             int difference1 = int(closestValue) * int(bidderCount) - int(total);
             difference1 = difference1 >= 0 ? difference1 : -1 * difference1;
@@ -354,16 +241,27 @@ contract AveragePrice is AuctionParent {
             
             if (difference2 < difference1) {
                 // the new value is closer to the average
+                closestBidder.transfer(bids[closestBidder].deposit);
+                bids[closestBidder].blindedBid = bytes32(0);
+                
                 closestBidder = currentBidder;
                 closestValue = currentValue;
+            } else {
+                // If the new bid is not closed then return all the amount back
+                currentBidder.transfer(bids[currentBidder].deposit);
+                bids[currentBidder].blindedBid = bytes32(0);
             }
         }
-
-        // setting the requiredBidder and the value
+        // All the values have been returned and the final bid has been kept
+        // the correct amount has to be transferred to seller and the rest 
+        // back to the correct bidder.
+        uint refund =  bids[closestBidder].deposit - closestValue;
+        closestBidder.transfer(refund);
         bids[closestBidder].blindedBid = bytes32(0);
+        
         requiredBidder = closestBidder;
         requiredBid = closestValue;
+        
         return;
     }
 }
-
