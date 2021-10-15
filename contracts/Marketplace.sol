@@ -3,15 +3,15 @@ pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
 
 
-// @title Marketplace for selling items
-// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
-// @notice View, sell, and buy items
-// @dev It is assumed that the seller will deliver after getting paid
+/// @title Marketplace for selling items
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice View, sell, and buy items
+/// @dev It is assumed that the seller will deliver after getting paid
 contract Marketplace {
-    // @dev Possible states that a Listing can take
+    /// @dev Possible states that a Listing can take
     enum State { UNSOLD, SOLD, PENDING, DELIVERED }
 
-    // @dev Stores the encrypted password
+    /// @dev Stores the encrypted password
     struct Encrypted {
       bytes32 iv;
       string ephemPublicKey;
@@ -19,7 +19,7 @@ contract Marketplace {
       string mac;
     }
 
-    // @dev Stores the details of a listing
+    /// @dev Stores the details of a listing
     struct Listing {
         uint listingID;
         string itemName;
@@ -36,14 +36,14 @@ contract Marketplace {
     uint private itemCount = 0;
     uint public itemSold = 0;
 
-    // @dev mapping for all the Listing
+    /// @dev mapping for all the Listing
     mapping(uint256 => Listing) private listings;
 
-    // @notice Triggered to store the details of a listing on transaction logs
-    // @param listingID Unique Id for the listing
-    // @param itemName Name of the item
-    // @param askingPrice Price set by the seller
-    // @param uniqueSellerID The seller ID
+    /// @notice Triggered to store the details of a listing on transaction logs
+    /// @param listingID Unique Id for the listing
+    /// @param itemName Name of the item
+    /// @param askingPrice Price set by the seller
+    /// @param uniqueSellerID The seller ID
     event ListingCreated (
         uint indexed listingID,
         string itemName,
@@ -51,13 +51,13 @@ contract Marketplace {
         address uniqueSellerID
     );
 
-    // @notice Triggered to store the details of the sold listing on transaction logs
-    // @param listingID Unique Id for the listing
-    // @param itemName Name of the item
-    // @param askingPrice Price set by the seller
-    // @param uniqueSellerID The seller ID
-    // @param uniqueBuyerID The buyer ID
-    // @param buyerPubKey The public key of the buyer to encrypt the item with
+    /// @notice Triggered to store the details of the sold listing on transaction logs
+    /// @param listingID Unique Id for the listing
+    /// @param itemName Name of the item
+    /// @param askingPrice Price set by the seller
+    /// @param uniqueSellerID The seller ID
+    /// @param uniqueBuyerID The buyer ID
+    /// @param buyerPubKey The public key of the buyer to encrypt the item with
     event ListingSold (
         uint listingID,
         string itemName,
@@ -67,12 +67,12 @@ contract Marketplace {
         string buyerPubKey
     );
 
-    // @notice Triggered to store the details of the delivery of a listing on transaction logs
-    // @dev Must not store the item itself for privacy
-    // @param listingID Unique Id for the listing
-    // @param uniqueSellerID The seller ID
-    // @param uniqueBuyerID The buyer ID
-    // @param item The encrypted password
+    /// @notice Triggered to store the details of the delivery of a listing on transaction logs
+    /// @dev Must not store the item itself for privacy
+    /// @param listingID Unique Id for the listing
+    /// @param uniqueSellerID The seller ID
+    /// @param uniqueBuyerID The buyer ID
+    /// @param item The encrypted password
     event ListingDelivered (
         uint listingID,
         Encrypted item,
@@ -81,13 +81,13 @@ contract Marketplace {
 
     );
 
-    // @notice Triggered to store the details of the confirmation of a listing on transaction logs
-    // @dev Must not store the item itself for privacy
-    // @param listingID Unique Id for the listing
-    // @param itemName Name of the item
-    // @param askingPrice Price set by the seller
-    // @param uniqueSellerID The public key for the transaction
-    // @param uniqueBuyerID The public key for the transaction
+    /// @notice Triggered to store the details of the confirmation of a listing on transaction logs
+    /// @dev Must not store the item itself for privacy
+    /// @param listingID Unique Id for the listing
+    /// @param itemName Name of the item
+    /// @param askingPrice Price set by the seller
+    /// @param uniqueSellerID The public key for the transaction
+    /// @param uniqueBuyerID The public key for the transaction
     event ListingConfirmed (
         uint listingID,
         string itemName,
@@ -97,16 +97,16 @@ contract Marketplace {
 
     );
 
-    // @notice Constructor to define the marketplace owner
+    /// @notice Constructor to define the marketplace owner
     constructor() public {
         owner = msg.sender;
     }
 
-    // @notice Function to add listing to the Marketplace
-    // @dev Triggers the event for logging
-    // @param price Price set by the seller
-    // @param itemName Name of the item
-    // @param itemDesc Description of the item set by seller
+    /// @notice Function to add listing to the Marketplace
+    /// @dev Triggers the event for logging
+    /// @param price Price set by the seller
+    /// @param itemName Name of the item
+    /// @param itemDesc Description of the item set by seller
     function createListing(
         string memory itemName,
         string memory itemDesc,
@@ -136,8 +136,8 @@ contract Marketplace {
     }
 
 
-    // @notice Function to print all the active listings
-    // @return Listing The list of all active listings
+    /// @notice Function to print all the active listings
+    /// @return Listing The list of all active listings
     function fetchMarketItems() public view returns (Listing[] memory) {
         uint unsoldItemCount = itemCount - itemSold;
         uint currentIndex = 0;
@@ -153,8 +153,8 @@ contract Marketplace {
         return items;
     }
 
-    // @notice Function to print all listings put on sale by an user
-    // @return Listing The list of all listings sold by an user
+    /// @notice Function to print all listings put on sale by an user
+    /// @return Listing The list of all listings sold by an user
     function fetchSoldItems() public view returns (Listing[] memory) {
         uint cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
@@ -176,8 +176,8 @@ contract Marketplace {
 
     }
 
-    // @notice Function to print all listings bought by an user
-    // @return Listing The list of all listings bought by an user
+    /// @notice Function to print all listings bought by an user
+    /// @return Listing The list of all listings bought by an user
     function fetchBoughtItems() public view returns (Listing[] memory) {
         uint cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
@@ -199,9 +199,9 @@ contract Marketplace {
     }
 
 
-    // @notice Function to buy a listing and accepts the money to store in the contract
-    // @dev Triggers the event for logging
-    // @param itemId The item the buyer wants to buy
+    /// @notice Function to buy a listing and accepts the money to store in the contract
+    /// @dev Triggers the event for logging
+    /// @param itemId The item the buyer wants to buy
     function buyListing(uint itemId, string calldata buyerPubKey) external payable {
         require(msg.value >= listings[itemId].askingPrice, "Insufficient funds transfered");
         require(listings[itemId].state == State.UNSOLD, "Listing not in UNSOLD state");
@@ -222,13 +222,13 @@ contract Marketplace {
 
     }
 
-    // @notice Called by the seller to store the password in encrypted form
-    // @dev item password is encrypted
-    // @param itemId Unique Id for the listing
-    // @param iv Initialization vector for the password's encryption
-    // @param ephemPublicKey Seller's ephemeral public key
-    // @param ciphertext Encrypted password string
-    // @param mac Checksum to maintain integrity of the message
+    /// @notice Called by the seller to store the password in encrypted form
+    /// @dev item password is encrypted
+    /// @param itemId Unique Id for the listing
+    /// @param iv Initialization vector for the password's encryption
+    /// @param ephemPublicKey Seller's ephemeral public key
+    /// @param ciphertext Encrypted password string
+    /// @param mac Checksum to maintain integrity of the message
     function deliverListing(
       uint itemId,
       bytes32 iv,
@@ -254,9 +254,9 @@ contract Marketplace {
         );
     }
 
-    // @notice Function to confirm a listing and transfer money to the seller
-    // @dev Triggers the event for logging
-    // @param itemId The item the buyer wants to confirm
+    /// @notice Function to confirm a listing and transfer money to the seller
+    /// @dev Triggers the event for logging
+    /// @param itemId The item the buyer wants to confirm
     function confirmListing(uint itemId) external {
         require(listings[itemId].uniqueBuyerID == msg.sender, "Only buyer can confirm");
         require(listings[itemId].state == State.PENDING, "Listing not in PENDING state");
@@ -274,8 +274,8 @@ contract Marketplace {
         );
     }
 
-    // @notice Function that clears the marketplace
-    // @dev Useful for testing
+    /// @notice Function that clears the marketplace
+    /// @dev Useful for testing
     function killMarketplace() external {
         require(msg.sender == owner, "Only the owner can kill the marketplace");
         selfdestruct(owner);

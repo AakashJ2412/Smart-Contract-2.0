@@ -4,15 +4,15 @@ pragma experimental ABIEncoderV2;
 
 import { FirstPrice } from "./Auction.sol";
 
-// @title Marketplace for selling items
-// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
-// @notice View, sell, and buy items
-// @dev It is assumed that the seller will deliver after getting paid
+/// @title Marketplace for selling items
+/// @author Aakash Jain, Ishaan Shah, Zeeshan Ahmed
+/// @notice View, sell, and buy items
+/// @dev It is assumed that the seller will deliver after getting paid
 contract FirstAuction {
-    // @dev Possible states that a Listing can take
+    /// @dev Possible states that a Listing can take
     enum State { BIDDING, REVEAL, SOLD, PENDING, DELIVERED }
 
-    // @dev Stores the encrypted password
+    /// @dev Stores the encrypted password
     struct Encrypted {
         bytes32 iv;
         string ephemPublicKey;
@@ -20,7 +20,7 @@ contract FirstAuction {
         string mac;
     }
 
-    // @dev Stores the details of a listing
+    /// @dev Stores the details of a listing
     struct Listing {
         uint listingID;
         string itemName;
@@ -36,25 +36,25 @@ contract FirstAuction {
     uint private itemCount = 0;
     uint public itemBid = 0;
 
-    // @dev mapping for all the Listing
+    /// @dev mapping for all the Listing
     mapping(uint256 => Listing) private listings;
 
-    // @notice Triggered to store the details of a listing on transaction logs
-    // @param listingID Unique Id for the listing
-    // @param itemName Name of the item
-    // @param listingID Unique Id for the listing
-    // @param uniqueSellerID The seller ID
+    /// @notice Triggered to store the details of a listing on transaction logs
+    /// @param listingID Unique Id for the listing
+    /// @param itemName Name of the item
+    /// @param listingID Unique Id for the listing
+    /// @param uniqueSellerID The seller ID
     event ListingCreated (
         uint indexed listingID,
         string itemName,
         address uniqueSellerID
     );
 
-    // @notice Triggered when someone bids on a listing
-    // @param listingID Unique Id for the listing
-    // @param bidderAddress Unique Id for the bidder
-    // @param value Amount of currency transferred
-    // @param blindBid The hashed bid
+    /// @notice Triggered when someone bids on a listing
+    /// @param listingID Unique Id for the listing
+    /// @param bidderAddress Unique Id for the bidder
+    /// @param value Amount of currency transferred
+    /// @param blindBid The hashed bid
     event ListingBid (
         uint indexed listingID,
         address bidderAddress,
@@ -63,11 +63,11 @@ contract FirstAuction {
         string bidderPubKey
     );
 
-    // @notice Triggered when someone reveals their bid
-    // @param listingID Unique Id for the listing
-    // @param bidderAddress Unique Id for the bidder
-    // @param value The actual bid made
-    // @param successful Was the revealed value valid
+    /// @notice Triggered when someone reveals their bid
+    /// @param listingID Unique Id for the listing
+    /// @param bidderAddress Unique Id for the bidder
+    /// @param value The actual bid made
+    /// @param successful Was the revealed value valid
     event ListingReveal (
         uint indexed listingID,
         address bidderAddress,
@@ -75,24 +75,24 @@ contract FirstAuction {
         bool successful
     );
 
-    // @notice Triggered to store the details of the sold listing on transaction logs
-    // @param listingID Unique Id for the listing
-    // @param itemName Name of the item
-    // @param askingPrice Price set by the seller
-    // @param uniqueSellerID The seller ID
-    // @param uniqueBuyerID The buyer ID
+    /// @notice Triggered to store the details of the sold listing on transaction logs
+    /// @param listingID Unique Id for the listing
+    /// @param itemName Name of the item
+    /// @param askingPrice Price set by the seller
+    /// @param uniqueSellerID The seller ID
+    /// @param uniqueBuyerID The buyer ID
     event ListingSold (
         uint listingID,
         address indexed uniqueSellerID,
         address uniqueBuyerID
     );
 
-    // @notice Triggered to store the details of the delivery of a listing on transaction logs
-    // @dev Must not store the item itself for privacy
-    // @param listingID Unique Id for the listing
-    // @param uniqueSellerID The seller ID
-    // @param uniqueBuyerID The buyer ID
-    // @param item The encrypted password
+    /// @notice Triggered to store the details of the delivery of a listing on transaction logs
+    /// @dev Must not store the item itself for privacy
+    /// @param listingID Unique Id for the listing
+    /// @param uniqueSellerID The seller ID
+    /// @param uniqueBuyerID The buyer ID
+    /// @param item The encrypted password
     event ListingDelivered (
         uint listingID,
         Encrypted item,
@@ -101,13 +101,13 @@ contract FirstAuction {
 
     );
 
-    // @notice Triggered to store the details of the confirmation of a listing on transaction logs
-    // @dev Must not store the item itself for privacy
-    // @param listingID Unique Id for the listing
-    // @param itemName Name of the item
-    // @param askingPrice Price set by the seller
-    // @param uniqueSellerID The public key for the transaction
-    // @param uniqueBuyerID The public key for the transaction
+    /// @notice Triggered to store the details of the confirmation of a listing on transaction logs
+    /// @dev Must not store the item itself for privacy
+    /// @param listingID Unique Id for the listing
+    /// @param itemName Name of the item
+    /// @param askingPrice Price set by the seller
+    /// @param uniqueSellerID The public key for the transaction
+    /// @param uniqueBuyerID The public key for the transaction
     event ListingConfirmed (
         uint listingID,
         string itemName,
@@ -116,16 +116,16 @@ contract FirstAuction {
 
     );
 
-    // @notice Constructor to define the marketplace owner
+    /// @notice Constructor to define the marketplace owner
     constructor() public {
         owner = msg.sender;
     }
 
-    // @notice Function to add listing to the Marketplace
-    // @dev Triggers the event for logging
-    // @param price Price set by the seller
-    // @param itemName Name of the item
-    // @param itemDesc Description of the item set by seller
+    /// @notice Function to add listing to the Marketplace
+    /// @dev Triggers the event for logging
+    /// @param price Price set by the seller
+    /// @param itemName Name of the item
+    /// @param itemDesc Description of the item set by seller
     function createListing(
         string memory itemName,
         string memory itemDesc
@@ -149,8 +149,8 @@ contract FirstAuction {
         itemCount += 1;
     }
 
-    // @notice Function to print all the active listings
-    // @return Listing The list of all active listings
+    /// @notice Function to print all the active listings
+    /// @return Listing The list of all active listings
     function fetchMarketItems() public view returns (Listing[] memory) {
         uint unsoldItemCount = itemCount - itemBid;
         uint currentIndex = 0;
@@ -166,8 +166,8 @@ contract FirstAuction {
         return items;
     }
 
-    // @notice Function to print all listings put on sale by an user
-    // @return Listing The list of all listings sold by an user
+    /// @notice Function to print all listings put on sale by an user
+    /// @return Listing The list of all listings sold by an user
     function fetchSoldItems() public view returns (Listing[] memory) {
         uint cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
@@ -188,8 +188,8 @@ contract FirstAuction {
         return items;
     }
 
-    // @notice Function to print all listings which an user has bid and bought
-    // @return Listing The list of all listings bid upon by an user
+    /// @notice Function to print all listings which an user has bid and bought
+    /// @return Listing The list of all listings bid upon by an user
     function fetchBoughtItems() public view returns (Listing[] memory) {
         uint cnt = 0;
         for (uint i = 0; i < itemCount; i++) {
@@ -212,11 +212,11 @@ contract FirstAuction {
         return items;
     }
     
-    // @notice Function to buy a listing and accepts the money to store in the contract
-    // @dev Triggers the event for logging
-    // @param itemId The item the buyer wants to buy
-    // @param blindBid The hash of bid made by the bidder
-    // @param bidderPubKey The public key of the bidder
+    /// @notice Function to buy a listing and accepts the money to store in the contract
+    /// @dev Triggers the event for logging
+    /// @param itemId The item the buyer wants to buy
+    /// @param blindBid The hash of bid made by the bidder
+    /// @param bidderPubKey The public key of the bidder
     function bidListing(uint itemId, string calldata bidderPubKey, bytes32 blindBid)
         external payable
     {
@@ -233,10 +233,10 @@ contract FirstAuction {
         );
     }
 
-    // @notice Function to reveal a bid made for a listing
-    // @dev Triggers the event for logging
-    // @param itemId The item the buyer wants to buy
-    // @param value The value of bid made by the bidder
+    /// @notice Function to reveal a bid made for a listing
+    /// @dev Triggers the event for logging
+    /// @param itemId The item the buyer wants to buy
+    /// @param value The value of bid made by the bidder
     function revealListing(uint itemId, uint value)
         external returns(bool)
     {
@@ -254,13 +254,13 @@ contract FirstAuction {
         return successful;
     }
 
-    // @notice Called by the seller to store the password in encrypted form
-    // @dev item password is encrypted
-    // @param itemId Unique Id for the listing
-    // @param iv Initialization vector for the password's encryption
-    // @param ephemPublicKey Seller's ephemeral public key
-    // @param ciphertext Encrypted password string
-    // @param mac Checksum to maintain integrity of the message
+    /// @notice Called by the seller to store the password in encrypted form
+    /// @dev item password is encrypted
+    /// @param itemId Unique Id for the listing
+    /// @param iv Initialization vector for the password's encryption
+    /// @param ephemPublicKey Seller's ephemeral public key
+    /// @param ciphertext Encrypted password string
+    /// @param mac Checksum to maintain integrity of the message
     function deliverListing(
       uint itemId,
       bytes32 iv,
@@ -285,9 +285,9 @@ contract FirstAuction {
         );
     }
 
-    // @notice Function to confirm a listing and transfer money to the seller
-    // @dev Triggers the event for logging
-    // @param itemId The item the buyer wants to confirm
+    /// @notice Function to confirm a listing and transfer money to the seller
+    /// @dev Triggers the event for logging
+    /// @param itemId The item the buyer wants to confirm
     function confirmListing(uint itemId) external {
         require(listings[itemId].uniqueBuyerID == msg.sender, "Only buyer can confirm");
         listings[itemId].state = State.DELIVERED;
@@ -300,8 +300,8 @@ contract FirstAuction {
         );
     }
 
-    // @notice Function to end bidding phase
-    // @param itemId The ID of the the listings
+    /// @notice Function to end bidding phase
+    /// @param itemId The ID of the the listings
     function endBiddingPhase(uint itemId) external {
         require(listings[itemId].uniqueSellerID == msg.sender, "Only seller can end bidding");
         require(listings[itemId].state == State.BIDDING, "Listing not in BIDDING state");
@@ -310,9 +310,9 @@ contract FirstAuction {
         itemBid += 1;
     }
 
-    // @notice Function to end reveal phase
-    // @param itemId The ID of the the listings
-    // @returns winner The address of the winner
+    /// @notice Function to end reveal phase
+    /// @param itemId The ID of the the listings
+    /// @returns winner The address of the winner
     function endRevealPhase(uint itemId) external returns(address) {
         require(listings[itemId].uniqueSellerID == msg.sender, "Only seller can end bidding");
         require(listings[itemId].state == State.REVEAL, "Listing not in REVEAL state");
@@ -328,8 +328,8 @@ contract FirstAuction {
         return listings[itemId].uniqueBuyerID;
     }
     
-    // @notice Function to get winners public key
-    // @patam itemId The ID of the listing
+    /// @notice Function to get winners public key
+    /// @patam itemId The ID of the listing
     function getWinnerPubKey(uint itemId) external view returns(string memory) {
         if (listings[itemId].uniqueBuyerID == address(0)) {
             return "";
@@ -338,8 +338,8 @@ contract FirstAuction {
         return listings[itemId].auction.fetchBidFromAddress(listings[itemId].uniqueBuyerID).bidderPublicKey;
     }
 
-    // @notice Function that clears the marketplace
-    // @dev Useful for testing
+    /// @notice Function that clears the marketplace
+    /// @dev Useful for testing
     function killMarketplace() external {
         require(msg.sender == owner, "Only the owner can kill the marketplace");
         selfdestruct(owner);
