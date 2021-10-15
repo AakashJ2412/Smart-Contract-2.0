@@ -102,14 +102,14 @@ contract("FirstPrice", (accounts) => {
       from: accounts[1],
       value: bidValues[0],
     });
-    // await firstprice.bid(blindValues[1], accounts[2], "pubkey", {
-    //   from: accounts[2],
-    //   value: bidValues[1],
-    // });
+    await firstprice.bid(blindValues[1], accounts[2], "pubkey", {
+      from: accounts[2],
+      value: bidValues[1],
+    });
 
     // Single bid is the winner of the auction.
     await firstprice.reveal(bidValues[0], accounts[1]);
-    // await firstprice.reveal(bidValues[1], accounts[2]);
+    await firstprice.reveal(bidValues[1], accounts[2]);
 
     const tx = await firstprice.auctionEnd({ from: accounts[0] });
     const { logs } = tx;
