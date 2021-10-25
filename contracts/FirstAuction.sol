@@ -42,7 +42,6 @@ contract FirstAuction {
     /// @notice Triggered to store the details of a listing on transaction logs
     /// @param listingID Unique Id for the listing
     /// @param itemName Name of the item
-    /// @param listingID Unique Id for the listing
     /// @param uniqueSellerID The seller ID
     event ListingCreated (
         uint indexed listingID,
@@ -77,8 +76,6 @@ contract FirstAuction {
 
     /// @notice Triggered to store the details of the sold listing on transaction logs
     /// @param listingID Unique Id for the listing
-    /// @param itemName Name of the item
-    /// @param askingPrice Price set by the seller
     /// @param uniqueSellerID The seller ID
     /// @param uniqueBuyerID The buyer ID
     event ListingSold (
@@ -105,7 +102,6 @@ contract FirstAuction {
     /// @dev Must not store the item itself for privacy
     /// @param listingID Unique Id for the listing
     /// @param itemName Name of the item
-    /// @param askingPrice Price set by the seller
     /// @param uniqueSellerID The public key for the transaction
     /// @param uniqueBuyerID The public key for the transaction
     event ListingConfirmed (
@@ -123,7 +119,6 @@ contract FirstAuction {
 
     /// @notice Function to add listing to the Marketplace
     /// @dev Triggers the event for logging
-    /// @param price Price set by the seller
     /// @param itemName Name of the item
     /// @param itemDesc Description of the item set by seller
     function createListing(
@@ -312,7 +307,7 @@ contract FirstAuction {
 
     /// @notice Function to end reveal phase
     /// @param itemId The ID of the the listings
-    /// @returns winner The address of the winner
+    /// @return winner The address of the winner
     function endRevealPhase(uint itemId) external returns(address) {
         require(listings[itemId].uniqueSellerID == msg.sender, "Only seller can end bidding");
         require(listings[itemId].state == State.REVEAL, "Listing not in REVEAL state");
@@ -329,7 +324,7 @@ contract FirstAuction {
     }
     
     /// @notice Function to get winners public key
-    /// @patam itemId The ID of the listing
+    /// @param itemId The ID of the listing
     function getWinnerPubKey(uint itemId) external view returns(string memory) {
         if (listings[itemId].uniqueBuyerID == address(0)) {
             return "";

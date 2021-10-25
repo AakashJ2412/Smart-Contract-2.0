@@ -68,7 +68,7 @@ contract AuctionParent {
     );
     /// @notice Function called by the buyer to make a bid.
     /// @param _blindedBid Encrypted amount.
-    /// @param bidder
+    /// @param bidder address of the bidder.
     /// @param publicKey public key for the bidder.
     function bid(bytes32 _blindedBid, address bidder, string memory publicKey)
         public
@@ -184,15 +184,14 @@ contract FirstPrice is AuctionParent {
 
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _beneficiary the account to which the amount will be transferred.
+    /// @param beneficiary the account to which the amount will be transferred.
     /// @param _item the item on auction.
     constructor(
         address payable beneficiary,
         string memory _item
     ) public AuctionParent(beneficiary, _item) { }
     
-    /// @notice Triggered at the end to calculate the average and set the 
-    ///         requiredBidder.
+    /// @notice Triggered at the end to calculate the average and set the requiredBidder.
     /// @dev Sends back all the amount.
     function endTrigger() internal {
         uint highestValue = bids[bidders[0]].reveal;
@@ -232,7 +231,7 @@ contract SecondPrice is AuctionParent {
 
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _beneficiary the account to which the amount will be transferred.
+    /// @param beneficiary the account to which the amount will be transferred.
     /// @param _item the item on auction.
     constructor(
         address payable beneficiary,
@@ -283,15 +282,14 @@ contract AveragePrice is AuctionParent {
     
     /// @notice Constructor for the auction. 
     /// @dev Triggers event for logs and calls the parent constructor.
-    /// @param _beneficiary the account to which the amount will be transferred.
+    /// @param beneficiary the account to which the amount will be transferred.
     /// @param _item the item on auction.
     constructor(
         address payable beneficiary,
         string memory _item
     ) public AuctionParent(beneficiary, _item) { }
     
-    /// @notice Triggered at the end to calculate the average and set the 
-    ///         requiredBidder.
+    /// @notice Triggered at the end to calculate the average and set the requiredBidder.
     /// @dev Sends back all the amount.
     function endTrigger() internal {
         uint total = 0;
